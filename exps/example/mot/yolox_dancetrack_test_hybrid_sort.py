@@ -42,7 +42,7 @@ class Exp(MyExp):
         self.TCM_byte_step = True
         self.TCM_first_step_weight = 1.5
         self.TCM_byte_step_weight = 1.0
-        self.hybird_sort_with_reid = False
+        self.hybrid_sort_with_reid = False
 
     def get_data_loader(self, batch_size, is_distributed, no_aug=False):
         from yolox.data import (
