@@ -16,8 +16,8 @@ from yolox.utils import (
 from trackers.byte_tracker.byte_tracker import BYTETracker
 from trackers.byte_tracker.byte_tracker_score import BYTETracker_score
 from trackers.ocsort_tracker.ocsort import OCSort
-from trackers.hybird_sort_tracker.hybird_sort import Hybird_Sort
-from trackers.hybird_sort_tracker.hybird_sort_reid import Hybird_Sort_ReID
+from trackers.hybrid_sort_tracker.hybrid_sort import Hybrid_Sort
+from trackers.hybrid_sort_tracker.hybrid_sort_reid import Hybrid_Sort_ReID
 from trackers.sort_tracker.sort import Sort
 from trackers.sort_tracker.sort_score import Sort_score
 from trackers.deepsort_tracker.deepsort import DeepSort
@@ -820,8 +820,10 @@ class MOTEvaluator:
                     video_names[video_id] = video_name
 
                 if frame_id == 1:
-                    tracker = Hybird_Sort_ReID(args, det_thresh=self.args.track_thresh, iou_threshold=self.args.iou_thresh,
-                                     asso_func=self.args.asso, delta_t=self.args.deltat, inertia=self.args.inertia)
+                    tracker = Hybrid_Sort_ReID(args, det_thresh=self.args.track_thresh,
+                                               iou_threshold=self.args.iou_thresh,
+                                               asso_func=self.args.asso, delta_t=self.args.deltat,
+                                               inertia=self.args.inertia)
                     if len(results) != 0:
                         result_filename = os.path.join(result_folder, '{}.txt'.format(video_names[video_id - 1]))
                         write_results_no_score(result_filename, results)
