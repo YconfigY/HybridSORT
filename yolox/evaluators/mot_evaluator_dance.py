@@ -540,7 +540,7 @@ class MOTEvaluator:
         synchronize()
         return eval_results
 
-    def evaluate_hybird_sort(
+    def evaluate_hybrid_sort(
             self,
             args,
             model,
@@ -638,7 +638,7 @@ class MOTEvaluator:
                     video_names[video_id] = video_name
 
                 if frame_id == 1:
-                    tracker = Hybird_Sort(args, det_thresh=self.args.track_thresh, iou_threshold=self.args.iou_thresh,
+                    tracker = Hybrid_Sort(args, det_thresh=self.args.track_thresh, iou_threshold=self.args.iou_thresh,
                                      asso_func=self.args.asso, delta_t=self.args.deltat, inertia=self.args.inertia,
                                      use_byte=self.args.use_byte)
                     if len(results) != 0:
@@ -717,7 +717,7 @@ class MOTEvaluator:
         return eval_results
 
 
-    def evaluate_hybird_sort_reid(
+    def evaluate_hybrid_sort_reid(
             self,
             args,
             model,

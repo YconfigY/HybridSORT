@@ -338,7 +338,7 @@ class Hybrid_Sort(object):
         for t, trk in enumerate(trks):
             pos, kalman_score, simple_score = self.trackers[t].predict()
             try:
-                trk[:] = [pos[0][0], pos[0][1], pos[0][2], pos[0][3], kalman_score, simple_score[0]]
+                trk[:] = [pos[0][0], pos[0][1], pos[0][2], pos[0][3], kalman_score[0], simple_score]
             except:
                 trk[:] = [pos[0][0], pos[0][1], pos[0][2], pos[0][3], kalman_score, simple_score]
             if np.any(np.isnan(pos)):

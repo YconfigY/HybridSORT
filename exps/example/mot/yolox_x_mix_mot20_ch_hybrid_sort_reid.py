@@ -42,7 +42,7 @@ class Exp(MyExp):
         self.TCM_byte_step = True
         self.TCM_first_step_weight = 1.0
         self.TCM_byte_step_weight = 1.0
-        self.hybird_sort_with_reid = True
+        self.hybrid_sort_with_reid = True
         self.with_fastreid =True
         self.EG_weight_high_score= 4.6
         self.EG_weight_low_score= 2.4
