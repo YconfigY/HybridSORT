@@ -55,7 +55,7 @@ def update_config(config):
 
 def get_code_path():
     """Get base path where code is"""
-    return os.path.abspath(os.path.join(os.path.dirname(__file__), ''))
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 
 def validate_metrics_list(metrics_list):

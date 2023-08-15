@@ -6,8 +6,8 @@ import traceback
 import numpy as np
 from copy import deepcopy
 from abc import ABC, abstractmethod
-from TrackEval import _timing
-from TrackEval.utils import TrackEvalException
+from .. import _timing
+from ..utils import TrackEvalException
 
 
 class _BaseDataset(ABC):
@@ -200,7 +200,7 @@ class _BaseDataset(ABC):
                     except Exception:
                         exc_str_init = 'In file %s the following line cannot be read correctly: \n' % os.path.basename(
                             file)
-                        exc_str = ' '.join([exc_str_init]+row)
+                        exc_str = ' '.join([exc_str_init] + row)
                         raise TrackEvalException(exc_str)
             fp.close()
         except Exception:
@@ -236,7 +236,7 @@ class _BaseDataset(ABC):
             masks2 = mask_utils.encode(np.array(np.transpose(masks2, (1, 2, 0)), order='F'))
 
         # use pycocotools for iou computation of rle encoded masks
-        ious = mask_utils.iou(masks1, masks2, [do_ioa]*len(masks2))
+        ious = mask_utils.iou(masks1, masks2, [do_ioa] * len(masks2))
         if len(masks1) == 0 or len(masks2) == 0:
             ious = np.asarray(ious).reshape(len(masks1), len(masks2))
         assert (ious >= 0 - np.finfo('float').eps).all()
@@ -292,8 +292,8 @@ class _BaseDataset(ABC):
         The default zero_distance of 2.0, corresponds to the default used in MOT15_3D, such that a 0.5 similarity
         threshold corresponds to a 1m distance threshold for TPs.
         """
-        dist = np.linalg.norm(dets1[:, np.newaxis]-dets2[np.newaxis, :], axis=2)
-        sim = np.maximum(0, 1 - dist/zero_distance)
+        dist = np.linalg.norm(dets1[:, np.newaxis] - dets2[np.newaxis, :], axis=2)
+        sim = np.maximum(0, 1 - dist / zero_distance)
         return sim
 
     @staticmethod
@@ -307,7 +307,7 @@ class _BaseDataset(ABC):
                 if np.max(counts) != 1:
                     duplicate_ids = unique_ids[counts > 1]
                     exc_str_init = 'Tracker predicts the same ID more than once in a single timestep ' \
-                                   '(seq: %s, frame: %i, ids:' % (data['seq'], t+1)
+                                   '(seq: %s, frame: %i, ids:' % (data['seq'], t + 1)
                     exc_str = ' '.join([exc_str_init] + [str(d) for d in duplicate_ids]) + ')'
                     if after_preproc:
                         exc_str_init += '\n Note that this error occurred after preprocessing (but not before), ' \
@@ -318,7 +318,7 @@ class _BaseDataset(ABC):
                 if np.max(counts) != 1:
                     duplicate_ids = unique_ids[counts > 1]
                     exc_str_init = 'Ground-truth has the same ID more than once in a single timestep ' \
-                                   '(seq: %s, frame: %i, ids:' % (data['seq'], t+1)
+                                   '(seq: %s, frame: %i, ids:' % (data['seq'], t + 1)
                     exc_str = ' '.join([exc_str_init] + [str(d) for d in duplicate_ids]) + ')'
                     if after_preproc:
                         exc_str_init += '\n Note that this error occurred after preprocessing (but not before), ' \

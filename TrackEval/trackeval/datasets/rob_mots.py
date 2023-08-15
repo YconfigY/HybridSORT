@@ -1,12 +1,11 @@
-
 import os
 import csv
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 from ._base_dataset import _BaseDataset
-from TrackEval import utils
-from TrackEval.utils import TrackEvalException
-from TrackEval import _timing
+from .. import utils
+from ..utils import TrackEvalException
+from .. import _timing
 from ..datasets.rob_mots_classmap import cls_id_to_name
 
 
@@ -43,7 +42,8 @@ class RobMOTS(_BaseDataset):
         self.config = utils.init_config(config, self.get_default_dataset_config())
 
         self.split = self.config['SPLIT_TO_EVAL']
-        valid_benchmarks = ['mots_challenge', 'kitti_mots', 'bdd_mots', 'davis_unsupervised', 'youtube_vis', 'ovis', 'waymo', 'tao']
+        valid_benchmarks = ['mots_challenge', 'kitti_mots', 'bdd_mots', 'davis_unsupervised', 'youtube_vis', 'ovis',
+                            'waymo', 'tao']
         self.box_gt_benchmarks = ['waymo', 'tao']
 
         self.sub_benchmark = self.config['SUB_BENCHMARK']
@@ -51,8 +51,9 @@ class RobMOTS(_BaseDataset):
             raise TrackEvalException('SUB_BENCHMARK config input is required (there is no default value)' +
                                      ', '.join(valid_benchmarks) + ' are valid.')
         if self.sub_benchmark not in valid_benchmarks:
-            raise TrackEvalException('Attempted to evaluate an invalid benchmark: ' + self.sub_benchmark + '. Only benchmarks ' +
-                                     ', '.join(valid_benchmarks) + ' are valid.')
+            raise TrackEvalException(
+                'Attempted to evaluate an invalid benchmark: ' + self.sub_benchmark + '. Only benchmarks ' +
+                ', '.join(valid_benchmarks) + ' are valid.')
 
         self.gt_fol = self.config['GT_FOLDER']
         self.tracker_fol = os.path.join(self.config['TRACKERS_FOLDER'], self.config['SPLIT_TO_EVAL'])
@@ -213,7 +214,7 @@ class RobMOTS(_BaseDataset):
                                                 'counts': region[6].encode(encoding='UTF-8')}
                                                for region in read_data[time_key]]
                         all_valid_masks += [mask for mask, cls in zip(raw_data['dets'][t], raw_data['classes'][t]) if
-                                      cls < 100]
+                                            cls < 100]
                     else:
                         raw_data['dets'][t] = np.atleast_2d([det[4:8] for det in read_data[time_key]]).astype(float)
 
@@ -329,7 +330,7 @@ class RobMOTS(_BaseDataset):
         self._check_unique_ids(raw_data)
 
         cls_id = self.class_name_to_class_id[cls]
-        ignore_class_id = cls_id+100
+        ignore_class_id = cls_id + 100
         seq = raw_data['seq']
 
         data_keys = ['gt_ids', 'tracker_ids', 'gt_dets', 'tracker_dets', 'tracker_confidences', 'similarity_scores']
@@ -364,7 +365,8 @@ class RobMOTS(_BaseDataset):
                 if len(ignore_regions_box) > 0:
                     ignore_regions_box[:, 2] = ignore_regions_box[:, 2] - ignore_regions_box[:, 0]
                     ignore_regions_box[:, 3] = ignore_regions_box[:, 3] - ignore_regions_box[:, 1]
-                    ignore_regions = mask_utils.frPyObjects(ignore_regions_box, self.seq_sizes[seq][0], self.seq_sizes[seq][1])
+                    ignore_regions = mask_utils.frPyObjects(ignore_regions_box, self.seq_sizes[seq][0],
+                                                            self.seq_sizes[seq][1])
                 else:
                     ignore_regions = []
             else:
@@ -405,7 +407,6 @@ class RobMOTS(_BaseDataset):
                 #     _calculate_box_ious(unmatched_tracker_dets, crowd_ignore_regions, box_format='x0y0x1y1',
                 #                         do_ioa=True)
 
-
                 if cls_id in self.seq_ignore_class_ids[seq]:
                     # Remove unmatched detections for classes that are marked as 'ignore' for the whole sequence.
                     to_remove_tracker = unmatched_indices
@@ -418,7 +419,7 @@ class RobMOTS(_BaseDataset):
                     unmatched_widths = tracker_boxes_t[:, 2]
                     unmatched_heights = tracker_boxes_t[:, 3]
                     unmatched_size = np.maximum(unmatched_heights, unmatched_widths)
-                    min_size = np.min(self.seq_sizes[seq])/8
+                    min_size = np.min(self.seq_sizes[seq]) / 8
                     is_too_small = unmatched_size <= min_size + np.finfo('float').eps
 
                     # For unmatched tracker dets remove those that are greater than 50% within an ignore region.
@@ -427,8 +428,10 @@ class RobMOTS(_BaseDataset):
                         for mask in ignore_regions[1:]:
                             ignore_region_merged = mask_utils.merge([ignore_region_merged, mask], intersect=False)
                         intersection_with_ignore_region = self. \
-                            _calculate_mask_ious(unmatched_tracker_dets, [ignore_region_merged], is_encoded=True, do_ioa=True)
-                        is_within_ignore_region = np.any(intersection_with_ignore_region > 0.5 + np.finfo('float').eps, axis=1)
+                            _calculate_mask_ious(unmatched_tracker_dets, [ignore_region_merged], is_encoded=True,
+                                                 do_ioa=True)
+                        is_within_ignore_region = np.any(intersection_with_ignore_region > 0.5 + np.finfo('float').eps,
+                                                         axis=1)
                         to_remove_tracker = unmatched_indices[np.logical_or(is_too_small, is_within_ignore_region)]
                     else:
                         to_remove_tracker = unmatched_indices[is_too_small]
@@ -437,7 +440,7 @@ class RobMOTS(_BaseDataset):
                 #   non-evaluated classes.
                 if cls == 'all':
                     unmatched_tracker_classes = [tracker_classes[i] for i in range(len(tracker_classes)) if
-                                              i in unmatched_indices]
+                                                 i in unmatched_indices]
                     is_ignore_class = np.isin(unmatched_tracker_classes, self.seq_ignore_class_ids[seq])
                     is_not_evaled_class = np.logical_not(np.isin(unmatched_tracker_classes, self.valid_class_ids))
                     to_remove_all = unmatched_indices[np.logical_or(is_ignore_class, is_not_evaled_class)]

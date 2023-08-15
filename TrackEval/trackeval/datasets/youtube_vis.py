@@ -2,9 +2,9 @@ import os
 import numpy as np
 import json
 from ._base_dataset import _BaseDataset
-from TrackEval.utils import TrackEvalException
-from TrackEval import utils
-from TrackEval import _timing
+from ..utils import TrackEvalException
+from .. import utils
+from .. import _timing
 
 
 class YouTubeVIS(_BaseDataset):
@@ -238,7 +238,6 @@ class YouTubeVIS(_BaseDataset):
         num_tracker_dets = 0
 
         for t in range(raw_data['num_timesteps']):
-
             # Only extract relevant dets for this class for eval (cls)
             gt_class_mask = np.atleast_1d(raw_data['gt_classes'][t] == cls_id)
             gt_class_mask = gt_class_mask.astype(np.bool)

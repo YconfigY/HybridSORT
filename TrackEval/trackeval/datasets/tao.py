@@ -4,13 +4,13 @@ import json
 import itertools
 from collections import defaultdict
 from scipy.optimize import linear_sum_assignment
-from TrackEval.utils import TrackEvalException
+from ..utils import TrackEvalException
 from ._base_dataset import _BaseDataset
-from TrackEval import utils
-from TrackEval import _timing
+from .. import utils
+from .. import _timing
 
 
-class TAO_OW(_BaseDataset):
+class TAO(_BaseDataset):
     """Dataset class for TAO tracking"""
 
     @staticmethod
@@ -29,7 +29,6 @@ class TAO_OW(_BaseDataset):
             'OUTPUT_SUB_FOLDER': '',  # Output files are saved in OUTPUT_FOLDER/tracker_name/OUTPUT_SUB_FOLDER
             'TRACKER_DISPLAY_NAMES': None,  # Names of trackers to display, if None: TRACKERS_TO_EVAL
             'MAX_DETECTIONS': 300,  # Number of maximal allowed detections per image (0 for unlimited)
-            'SUBSET': 'all'
         }
         return default_config
 
@@ -56,12 +55,6 @@ class TAO_OW(_BaseDataset):
         with open(os.path.join(self.gt_fol, gt_dir_files[0])) as f:
             self.gt_data = json.load(f)
 
-        self.subset = self.config['SUBSET']
-        if self.subset != 'all':
-            # Split GT data into `known`, `unknown` or `distractor`
-            self._split_known_unknown_distractor()
-            self.gt_data = self._filter_gt_data(self.gt_data)
-
         # merge categories marked with a merged tag in TAO dataset
         self._merge_categories(self.gt_data['annotations'] + self.gt_data['tracks'])
 
@@ -87,21 +80,18 @@ class TAO_OW(_BaseDataset):
                          in self.seq_to_classes[vid_id]['pos_cat_ids']])
         # only classes with ground truth are evaluated in TAO
         self.valid_classes = [cls['name'] for cls in self.gt_data['categories'] if cls['id'] in seen_cats]
-        # cls_name_to_cls_id_map = {cls['name']: cls['id'] for cls in self.gt_data['categories']}
+        cls_name_to_cls_id_map = {cls['name']: cls['id'] for cls in self.gt_data['categories']}
 
         if self.config['CLASSES_TO_EVAL']:
-            # self.class_list = [cls.lower() if cls.lower() in self.valid_classes else None
-            #                    for cls in self.config['CLASSES_TO_EVAL']]
-            self.class_list = ["object"]  # class-agnostic
+            self.class_list = [cls.lower() if cls.lower() in self.valid_classes else None
+                               for cls in self.config['CLASSES_TO_EVAL']]
             if not all(self.class_list):
                 raise TrackEvalException('Attempted to evaluate an invalid class. Only classes ' +
                                          ', '.join(self.valid_classes) +
                                          ' are valid (classes present in ground truth data).')
         else:
-            # self.class_list = [cls for cls in self.valid_classes]
-            self.class_list = ["object"]  # class-agnostic
-        # self.class_name_to_class_id = {k: v for k, v in cls_name_to_cls_id_map.items() if k in self.class_list}
-        self.class_name_to_class_id = {"object": 1}  # class-agnostic
+            self.class_list = [cls for cls in self.valid_classes]
+        self.class_name_to_class_id = {k: v for k, v in cls_name_to_cls_id_map.items() if k in self.class_list}
 
         # Get trackers to eval
         if self.config['TRACKERS_TO_EVAL'] is None:
@@ -192,7 +182,7 @@ class TAO_OW(_BaseDataset):
             annotations = img['annotations']
             raw_data['dets'][t] = np.atleast_2d([ann['bbox'] for ann in annotations]).astype(float)
             raw_data['ids'][t] = np.atleast_1d([ann['track_id'] for ann in annotations]).astype(int)
-            raw_data['classes'][t] = np.atleast_1d([1 for _ in annotations]).astype(int)   # class-agnostic
+            raw_data['classes'][t] = np.atleast_1d([ann['category_id'] for ann in annotations]).astype(int)
             if not is_gt:
                 raw_data['tracker_confidences'][t] = np.atleast_1d([ann['score'] for ann in annotations]).astype(float)
 
@@ -215,22 +205,17 @@ class TAO_OW(_BaseDataset):
         for k, v in key_map.items():
             raw_data[v] = raw_data.pop(k)
 
-        # all_classes = [self.class_name_to_class_id[cls] for cls in self.class_list]
-        all_classes = [1]  # class-agnostic
-
+        all_classes = [self.class_name_to_class_id[cls] for cls in self.class_list]
         if is_gt:
             classes_to_consider = all_classes
             all_tracks = self.videos_to_gt_tracks[seq_id]
         else:
-            # classes_to_consider = self.seq_to_classes[seq_id]['pos_cat_ids'] \
-            #                       + self.seq_to_classes[seq_id]['neg_cat_ids']
-            classes_to_consider = all_classes  # class-agnostic
+            classes_to_consider = self.seq_to_classes[seq_id]['pos_cat_ids'] \
+                                  + self.seq_to_classes[seq_id]['neg_cat_ids']
             all_tracks = self.tracker_data[tracker]['vids_to_tracks'][seq_id]
 
-        # classes_to_tracks = {cls: [track for track in all_tracks if track['category_id'] == cls]
-        #                      if cls in classes_to_consider else [] for cls in all_classes}
-        classes_to_tracks = {cls: [track for track in all_tracks]
-        if cls in classes_to_consider else [] for cls in all_classes}  # class-agnostic
+        classes_to_tracks = {cls: [track for track in all_tracks if track['category_id'] == cls]
+        if cls in classes_to_consider else [] for cls in all_classes}
 
         # mapping from classes to track information
         raw_data['classes_to_tracks'] = {cls: [{det['image_id']: np.atleast_1d(det['bbox'])
@@ -579,74 +564,3 @@ class TAO_OW(_BaseDataset):
                 if t in track_ids_to_update:
                     ann['track_id'] = new_track_ids[t, v]
         return len(track_ids_to_update)
-
-    def _split_known_unknown_distractor(self):
-        all_ids = set([i for i in range(1, 2000)])  # 2000 is larger than the max category id in TAO-OW.
-        # `knowns` includes 78 TAO_category_ids that corresponds to 78 COCO classes.
-        # (The other 2 COCO classes do not have corresponding classes in TAO).
-        self.knowns = {4, 13, 1038, 544, 1057, 34, 35, 36, 41, 45, 58, 60, 579, 1091, 1097, 1099, 78, 79, 81, 91, 1115,
-                     1117, 95, 1122, 99, 1132, 621, 1135, 625, 118, 1144, 126, 642, 1155, 133, 1162, 139, 154, 174, 185,
-                     699, 1215, 714, 717, 1229, 211, 729, 221, 229, 747, 235, 237, 779, 276, 805, 299, 829, 852, 347,
-                     371, 382, 896, 392, 926, 937, 428, 429, 961, 452, 979, 980, 982, 475, 480, 993, 1001, 502, 1018}
-        # `distractors` is defined as in the paper "Opening up Open-World Tracking"
-        self.distractors = {20, 63, 108, 180, 188, 204, 212, 247, 303, 403, 407, 415, 490, 504, 507, 513, 529, 567,
-                            569, 588, 672, 691, 702, 708, 711, 720, 736, 737, 798, 813, 815, 827, 831, 851, 877, 883,
-                            912, 971, 976, 1130, 1133, 1134, 1169, 1184, 1220}
-        self.unknowns = all_ids.difference(self.knowns.union(self.distractors))
-
-    def _filter_gt_data(self, raw_gt_data):
-        """
-        Filter out irrelevant data in the raw_gt_data
-        Args:
-            raw_gt_data: directly loaded from json.
-
-        Returns:
-            filtered gt_data
-        """
-        valid_cat_ids = list()
-        if self.subset == "known":
-            valid_cat_ids = self.knowns
-        elif self.subset == "distractor":
-            valid_cat_ids = self.distractors
-        elif self.subset == "unknown":
-            valid_cat_ids = self.unknowns
-        # elif self.subset == "test_only_unknowns":
-        #     valid_cat_ids = test_only_unknowns
-        else:
-            raise Exception("The parameter `SUBSET` is incorrect")
-
-        filtered = dict()
-        filtered["videos"] = raw_gt_data["videos"]
-        # filtered["videos"] = list()
-        unwanted_vid = set()
-        # for video in raw_gt_data["videos"]:
-        #     datasrc = video["name"].split('/')[1]
-        #     if datasrc in data_srcs:
-        #         filtered["videos"].append(video)
-        #     else:
-        #         unwanted_vid.add(video["id"])
-
-        filtered["annotations"] = list()
-        for ann in raw_gt_data["annotations"]:
-            if (ann["video_id"] not in unwanted_vid) and (ann["category_id"] in valid_cat_ids):
-                filtered["annotations"].append(ann)
-
-        filtered["tracks"] = list()
-        for track in raw_gt_data["tracks"]:
-            if (track["video_id"] not in unwanted_vid) and (track["category_id"] in valid_cat_ids):
-                filtered["tracks"].append(track)
-
-        filtered["images"] = list()
-        for image in raw_gt_data["images"]:
-            if image["video_id"] not in unwanted_vid:
-                filtered["images"].append(image)
-
-        filtered["categories"] = list()
-        for cat in raw_gt_data["categories"]:
-            if cat["id"] in valid_cat_ids:
-                filtered["categories"].append(cat)
-
-        filtered["info"] = raw_gt_data["info"]
-        filtered["licenses"] = raw_gt_data["licenses"]
-
-        return filtered

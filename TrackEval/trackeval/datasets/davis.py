@@ -2,9 +2,9 @@ import os
 import csv
 import numpy as np
 from ._base_dataset import _BaseDataset
-from TrackEval.utils import TrackEvalException
-from TrackEval import utils
-from TrackEval import _timing
+from ..utils import TrackEvalException
+from .. import utils
+from .. import _timing
 
 
 class DAVIS(_BaseDataset):
@@ -16,7 +16,8 @@ class DAVIS(_BaseDataset):
         code_path = utils.get_code_path()
         default_config = {
             'GT_FOLDER': os.path.join(code_path, 'data/gt/davis/davis_unsupervised_val/'),  # Location of GT data
-            'TRACKERS_FOLDER': os.path.join(code_path, 'data/trackers/davis/davis_unsupervised_val/'),  # Trackers location
+            'TRACKERS_FOLDER': os.path.join(code_path, 'data/trackers/davis/davis_unsupervised_val/'),
+            # Trackers location
             'OUTPUT_FOLDER': None,  # Where to save eval results (if None, same as TRACKERS_FOLDER)
             'TRACKERS_TO_EVAL': None,  # Filenames of trackers to eval (if None, all in folder)
             'SPLIT_TO_EVAL': 'val',  # Valid: 'val', 'train'
