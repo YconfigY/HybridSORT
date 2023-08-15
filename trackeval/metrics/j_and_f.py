@@ -1,14 +1,15 @@
-
-import numpy as np
 import math
+import numpy as np
 from scipy.optimize import linear_sum_assignment
-from ..utils import TrackEvalException
-from ._base_metric import _BaseMetric
-from .. import _timing
+
+from trackeval import _timing
+from trackeval.metrics._base_metric import _BaseMetric
+from trackeval.utils import TrackEvalException
 
 
 class JAndF(_BaseMetric):
     """Class which implements the J&F metrics"""
+
     def __init__(self, config=None):
         super().__init__()
         self.integer_fields = ['num_gt_tracks']
@@ -47,7 +48,7 @@ class JAndF(_BaseMetric):
 
         if frame_shape:
             # append all zero masks for timesteps in which tracks do not have a detection
-            zero_padding = np.zeros((frame_shape), order= 'F').astype(np.uint8)
+            zero_padding = np.zeros((frame_shape), order='F').astype(np.uint8)
             padding_mask = mask_utils.encode(zero_padding)
             for t in range(num_timesteps):
                 gt_id_det_mapping = {gt_ids[t][i]: gt_dets[t][i] for i in range(len(gt_ids[t]))}
@@ -226,7 +227,7 @@ class JAndF(_BaseMetric):
         for t, (gt_masks, tracker_masks) in enumerate(zip(gt_data, tracker_data)):
             curr_tracker_mask = mask_utils.decode(tracker_masks[tracker_data_id])
             curr_gt_mask = mask_utils.decode(gt_masks[gt_id])
-            
+
             bound_pix = bound_th if bound_th >= 1 - np.finfo('float').eps else \
                 np.ceil(bound_th * np.linalg.norm(curr_tracker_mask.shape))
 
@@ -299,7 +300,7 @@ class JAndF(_BaseMetric):
             area_gt = np.repeat(area_gt[np.newaxis, :], len(area_tr), axis=0)
 
             # mask iou computation with pycocotools
-            ious = np.atleast_2d(mask_utils.iou(time_data, time_gt, [0]*len(time_gt)))
+            ious = np.atleast_2d(mask_utils.iou(time_data, time_gt, [0] * len(time_gt)))
             # set iou to 1 if both masks are close to 0 (no ground truth and no predicted mask in timestep)
             ious[np.isclose(area_tr, 0) & np.isclose(area_gt, 0)] = 1
             assert (ious >= 0 - np.finfo('float').eps).all()

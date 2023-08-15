@@ -1,4 +1,3 @@
-
 """ run_youtube_vis.py
 Run example:
 run_youtube_vis.py --USE_PARALLEL False --METRICS HOTA --TRACKERS_TO_EVAL STEm_Seg
@@ -91,7 +90,7 @@ if __name__ == '__main__':
                 default_track_map_config = metric.get_default_metric_config()
                 default_track_map_config['USE_TIME_RANGES'] = False
                 default_track_map_config['AREA_RANGES'] = [[0 ** 2, 128 ** 2],
-                                                           [ 128 ** 2, 256 ** 2],
+                                                           [128 ** 2, 256 ** 2],
                                                            [256 ** 2, 1e5 ** 2]]
                 metrics_list.append(metric(default_track_map_config))
             else:

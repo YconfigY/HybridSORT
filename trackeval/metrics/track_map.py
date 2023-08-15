@@ -1,9 +1,10 @@
-import numpy as np
-from ._base_metric import _BaseMetric
-from .. import _timing
 from functools import partial
-from .. import utils
-from ..utils import TrackEvalException
+
+import numpy as np
+
+from trackeval import _timing, utils
+from trackeval.metrics._base_metric import _BaseMetric
+from trackeval.utils import TrackEvalException
 
 
 class TrackMAP(_BaseMetric):

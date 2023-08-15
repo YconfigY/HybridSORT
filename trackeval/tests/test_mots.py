@@ -40,7 +40,8 @@ for dataset_config in tests:
     test_data_loc = os.path.join(os.path.dirname(__file__), '..', 'data', 'tests', file_loc)
 
     for cls in classes:
-        results = {seq: raw_results[dataset_name][tracker][seq][cls] for seq in raw_results[dataset_name][tracker].keys()}
+        results = {seq: raw_results[dataset_name][tracker][seq][cls] for seq in
+                   raw_results[dataset_name][tracker].keys()}
         current_metrics_list = metrics_list + [trackeval.metrics.Count()]
         metric_names = trackeval.utils.validate_metrics_list(current_metrics_list)
 

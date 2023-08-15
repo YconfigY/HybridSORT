@@ -1,4 +1,3 @@
-
 import os
 import csv
 import numpy as np
@@ -103,8 +102,8 @@ def mask_iou(mask_rles1, mask_rles2, im_hs, im_ws, do_ioa=0):
     coco_masks2 = create_coco_mask(mask_rles2, im_hs, im_ws)
 
     if not hasattr(do_ioa, "__len__"):
-        do_ioa = [do_ioa]*len(coco_masks2)
-    assert(len(coco_masks2) == len(do_ioa))
+        do_ioa = [do_ioa] * len(coco_masks2)
+    assert (len(coco_masks2) == len(do_ioa))
     if len(coco_masks1) == 0 or len(coco_masks2) == 0:
         iou = np.zeros(len(coco_masks1), len(coco_masks2))
     else:
@@ -274,9 +273,9 @@ def combine_classes(data):
                 else:
                     output_data[timestep][k] = list(t_data[k])
             if 'cls' in output_data[timestep].keys():
-                output_data[timestep]['cls'] += [cls]*len(output_data[timestep]['ids'])
+                output_data[timestep]['cls'] += [cls] * len(output_data[timestep]['ids'])
             else:
-                output_data[timestep]['cls'] = [cls]*len(output_data[timestep]['ids'])
+                output_data[timestep]['cls'] = [cls] * len(output_data[timestep]['ids'])
 
     for timestep, t_data in enumerate(output_data):
         for k in t_data.keys():

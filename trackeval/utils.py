@@ -1,6 +1,6 @@
-import os
-import csv
 import argparse
+import csv
+import os
 from collections import OrderedDict
 
 

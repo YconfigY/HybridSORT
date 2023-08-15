@@ -1,9 +1,10 @@
-
 import os
+
 import numpy as np
 from scipy.optimize import linear_sum_assignment
-from ._base_metric import _BaseMetric
-from .. import _timing
+
+from trackeval import _timing
+from trackeval.metrics._base_metric import _BaseMetric
 
 
 class HOTA(_BaseMetric):
@@ -175,7 +176,7 @@ class HOTA(_BaseMetric):
 
         res['HOTA(0)'] = res['HOTA'][0]
         res['LocA(0)'] = res['LocA'][0]
-        res['HOTALocA(0)'] = res['HOTA(0)']*res['LocA(0)']
+        res['HOTALocA(0)'] = res['HOTA(0)'] * res['LocA(0)']
         return res
 
     def plot_single_tracker_results(self, table_res, tracker, cls, output_folder):

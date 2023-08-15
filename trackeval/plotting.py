@@ -1,6 +1,8 @@
 import os
+
 import numpy as np
-from .utils import TrackEvalException
+
+from trackeval.utils import TrackEvalException
 
 
 def plot_compare_trackers(tracker_folder, tracker_list, cls, output_folder, plots_list=None):
@@ -89,10 +91,10 @@ def create_comparison_plot(data, out_loc, y_label, x_label, sort_label, bg_label
     tracker_names = tracker_names[sort_index][:num_to_plot]
     print('\nPlotting %s vs %s, for the following (ordered) trackers:' % (y_label, x_label))
     for i, name in enumerate(tracker_names):
-        print('%i: %s' % (i+1, name))
+        print('%i: %s' % (i + 1, name))
 
     # Find best fitting boundaries for data
-    boundaries = _get_boundaries(x_values, y_values, round_val=gap_val/2)
+    boundaries = _get_boundaries(x_values, y_values, round_val=gap_val / 2)
 
     fig = plt.figure()
 
@@ -171,7 +173,7 @@ bg_function_dict = {
     "geometric_mean": geometric_mean,
     "jaccard": jaccard,
     "multiplication": multiplication,
-    }
+}
 
 
 def _plot_bg_contour(bg_function, plot_boundaries, gap_val):

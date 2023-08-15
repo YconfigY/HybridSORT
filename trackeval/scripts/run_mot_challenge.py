@@ -40,7 +40,7 @@ from multiprocessing import freeze_support
 # python trackeval/scripts/run_mot_challenge.py --BENCHMARK MOT17 --SPLIT_TO_EVAL train --TRACKERS_TO_EVAL ByteTrack
 # --METRICS HOTA CLEAR Identity VACE --TIME_PROGRESS False --USE_PARALLEL False --NUM_PARALLEL_CORES 1  --GT_FOLDER datasets/mot/ --TRACKERS_FOLDER YOLOX_outputs/yolox_s_mot17_half_repro1/track_results_ByteTrack/track_results --GT_LOC_FORMAT {gt_folder}/{seq}/gt/gt_val_half.txt
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from trackeval import trackeval  # noqa: E402
+import trackeval  # noqa: E402
 
 if __name__ == '__main__':
     freeze_support()
@@ -85,7 +85,7 @@ if __name__ == '__main__':
         dataset_config['SEQMAP_FILE'] = dataset_config['SEQMAP_FILE'][0]
 
     # Run code
-    evaluator = trackeval.Evaluator(eval_config) # 实例化Evaluator
+    evaluator = trackeval.Evaluator(eval_config)  # 实例化Evaluator
     dataset_list = [trackeval.datasets.MotChallenge2DBox(dataset_config)]
     metrics_list = []
     for metric in [trackeval.metrics.HOTA, trackeval.metrics.CLEAR, trackeval.metrics.Identity, trackeval.metrics.VACE]:

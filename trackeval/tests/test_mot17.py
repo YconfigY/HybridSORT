@@ -2,7 +2,6 @@
 Runs all metrics on 14 trackers for the MOT Challenge MOT17 benchmark.
 """
 
-
 import sys
 import os
 import numpy as np
@@ -73,4 +72,3 @@ for tracker in trackers:
 
     print('Tracker %s tests passed' % tracker)
 print('All tests passed')
-

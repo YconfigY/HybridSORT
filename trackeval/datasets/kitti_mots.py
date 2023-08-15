@@ -1,11 +1,12 @@
-import os
 import csv
+import os
+
 import numpy as np
 from scipy.optimize import linear_sum_assignment
-from ._base_dataset import _BaseDataset
-from .. import utils
-from .. import _timing
-from ..utils import TrackEvalException
+
+from trackeval import _timing, utils
+from trackeval.datasets._base_dataset import _BaseDataset
+from trackeval.utils import TrackEvalException
 
 
 class KittiMOTS(_BaseDataset):

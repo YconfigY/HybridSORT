@@ -82,7 +82,8 @@ if __name__ == '__main__':
     evaluator = trackeval.Evaluator(eval_config)
     dataset_list = [trackeval.datasets.DAVIS(dataset_config)]
     metrics_list = []
-    for metric in [trackeval.metrics.HOTA, trackeval.metrics.CLEAR, trackeval.metrics.Identity, trackeval.metrics.JAndF]:
+    for metric in [trackeval.metrics.HOTA, trackeval.metrics.CLEAR, trackeval.metrics.Identity,
+                   trackeval.metrics.JAndF]:
         if metric.get_name() in metrics_config['METRICS']:
             metrics_list.append(metric())
     if len(metrics_list) == 0:

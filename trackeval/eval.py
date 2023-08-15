@@ -4,10 +4,10 @@ import traceback
 from functools import partial
 from multiprocessing.pool import Pool
 
-import _timing, utils
-
-from .metrics import Count
-from .utils import TrackEvalException
+import _timing
+import utils
+from trackeval.metrics import Count
+from trackeval.utils import TrackEvalException
 
 
 class Evaluator:
@@ -108,7 +108,7 @@ class Evaluator:
                         for metric, metric_name in zip(metrics_list, metric_names):
                             cls_res = {cls_key: cls_value[metric_name]
                                        for cls_key, cls_value in res['COMBINED_SEQ'].items()
-                                       if cls_key not in  combined_cls_keys}
+                                       if cls_key not in combined_cls_keys}
                             res['COMBINED_SEQ']['cls_comb_cls_av'][metric_name] = \
                                 metric.combine_classes_class_averaged(cls_res)
                             res['COMBINED_SEQ']['cls_comb_det_av'][metric_name] = \
@@ -156,7 +156,8 @@ class Evaluator:
                                 if config['OUTPUT_DETAILED']:
                                     details.append(metric.detailed_results(table_res))
                                 if config['PLOT_CURVES']:
-                                    metric.plot_single_tracker_results(table_res, tracker_display_name, c_cls, output_fol)
+                                    metric.plot_single_tracker_results(table_res, tracker_display_name, c_cls,
+                                                                       output_fol)
                             if config['OUTPUT_SUMMARY']:
                                 utils.write_summary_results(summaries, c_cls, output_fol)
                             if config['OUTPUT_DETAILED']:

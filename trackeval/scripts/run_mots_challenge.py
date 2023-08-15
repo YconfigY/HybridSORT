@@ -75,7 +75,7 @@ if __name__ == '__main__':
             elif type(args[setting]) == type(None):
                 x = None
             elif setting == 'SEQ_INFO':
-                x = dict(zip(args[setting], [None]*len(args[setting])))
+                x = dict(zip(args[setting], [None] * len(args[setting])))
             else:
                 x = args[setting]
             config[setting] = x

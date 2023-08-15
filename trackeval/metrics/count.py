@@ -1,10 +1,10 @@
-
-from ._base_metric import _BaseMetric
-from .. import _timing
+from trackeval import _timing
+from trackeval.metrics._base_metric import _BaseMetric
 
 
 class Count(_BaseMetric):
     """Class which simply counts the number of tracker and gt detections and ids."""
+
     def __init__(self, config=None):
         super().__init__()
         self.integer_fields = ['Dets', 'GT_Dets', 'IDs', 'GT_IDs']

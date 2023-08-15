@@ -1,4 +1,3 @@
-
 """ run_bdd.py
 
 Run example:

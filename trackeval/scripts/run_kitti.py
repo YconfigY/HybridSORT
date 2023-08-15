@@ -1,4 +1,3 @@
-
 """ run_kitti.py
 
 Run example:

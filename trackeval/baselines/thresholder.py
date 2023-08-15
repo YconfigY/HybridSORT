@@ -20,7 +20,8 @@ THRESHOLD = 0.2
 code_path = get_code_path()
 config = {
     'INPUT_FOL': os.path.join(code_path, 'data/detections/rob_mots/{split}/non_overlap_supplied/data/'),
-    'OUTPUT_FOL': os.path.join(code_path, 'data/detections/rob_mots/{split}/threshold_' + str(100*THRESHOLD) + '/data/'),
+    'OUTPUT_FOL': os.path.join(code_path,
+                               'data/detections/rob_mots/{split}/threshold_' + str(100 * THRESHOLD) + '/data/'),
     'SPLIT': 'train',  # valid: 'train', 'val', 'test'.
     'Benchmarks': None,  # If None, all benchmarks in SPLIT.
 
@@ -31,7 +32,6 @@ config = {
 
 
 def do_sequence(seq_file):
-
     # Load input data from file (e.g. provided detections)
     # data format: data['cls'][t] = {'ids', 'scores', 'im_hs', 'im_ws', 'mask_rles'}
     data = butils.load_seq(seq_file)
@@ -89,4 +89,3 @@ if __name__ == '__main__':
     else:
         for seq_todo in seqs_todo:
             do_sequence(seq_todo)
-

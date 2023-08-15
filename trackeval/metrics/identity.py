@@ -1,8 +1,8 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment
-from ._base_metric import _BaseMetric
-from .. import _timing
-from .. import utils
+
+from trackeval import _timing, utils
+from trackeval.metrics._base_metric import _BaseMetric
 
 
 class Identity(_BaseMetric):

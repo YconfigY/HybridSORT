@@ -1,9 +1,11 @@
+import os
+from abc import ABC, abstractmethod
 
 import numpy as np
-from abc import ABC, abstractmethod
-from .. import _timing
-from ..utils import TrackEvalException
-import os
+
+from trackeval import _timing
+from trackeval.utils import TrackEvalException
+
 
 class _BaseMetric(ABC):
     @abstractmethod
@@ -34,7 +36,7 @@ class _BaseMetric(ABC):
     def combine_classes_class_averaged(self, all_res, ignore_empty_classes=False):
         ...
 
-    @ abstractmethod
+    @abstractmethod
     def combine_classes_det_averaged(self, all_res):
         ...
 
@@ -75,14 +77,15 @@ class _BaseMetric(ABC):
 
         print('')
         metric_name = self.get_name()
-        self._row_print(out_file, [metric_name + ': ' + tracker + '-' + cls] + self.summary_fields)       # TODO: [hgx 0403], add 'output_fol'
+        self._row_print(out_file, [
+            metric_name + ': ' + tracker + '-' + cls] + self.summary_fields)  # TODO: [hgx 0403], add 'output_fol'
         for seq, results in sorted(table_res.items()):
             if seq == 'COMBINED_SEQ':
                 continue
             summary_res = self._summary_row(results)
-            self._row_print(out_file, [seq] + summary_res)            # TODO: [hgx 0403], add 'output_fol'
+            self._row_print(out_file, [seq] + summary_res)  # TODO: [hgx 0403], add 'output_fol'
         summary_res = self._summary_row(table_res['COMBINED_SEQ'])
-        self._row_print(out_file, ['COMBINED'] + summary_res)         # TODO: [hgx 0403], add 'output_fol'
+        self._row_print(out_file, ['COMBINED'] + summary_res)  # TODO: [hgx 0403], add 'output_fol'
 
     def _summary_row(self, results_):
         vals = []
@@ -106,7 +109,7 @@ class _BaseMetric(ABC):
         for v in argv[1:]:
             to_print += '%-10s' % str(v)
         print(to_print)
-        if out_file is not None:        # TODO: [hgx 0403], write terminal outputs to txt file
+        if out_file is not None:  # TODO: [hgx 0403], write terminal outputs to txt file
             with open(out_file, 'a+', newline='') as f:
                 print(to_print, file=f)
 
@@ -119,7 +122,7 @@ class _BaseMetric(ABC):
         # Get detailed field information
         detailed_fields = self.float_fields + self.integer_fields
         for h in self.float_array_fields + self.integer_array_fields:
-            for alpha in [int(100*x) for x in self.array_labels]:
+            for alpha in [int(100 * x) for x in self.array_labels]:
                 detailed_fields.append(h + '___' + str(alpha))
             detailed_fields.append(h + '___AUC')
 

@@ -1,9 +1,9 @@
-
 import numpy as np
 from scipy.optimize import linear_sum_assignment
-from ._base_metric import _BaseMetric
-from .. import _timing
-from .. import utils
+
+from trackeval import _timing, utils
+from trackeval.metrics._base_metric import _BaseMetric
+
 
 class CLEAR(_BaseMetric):
     """Class which implements the CLEAR metrics"""
@@ -32,7 +32,6 @@ class CLEAR(_BaseMetric):
         # Configuration options:
         self.config = utils.init_config(config, self.get_default_config(), self.get_name())
         self.threshold = float(self.config['THRESHOLD'])
-
 
     @_timing.time
     def eval_sequence(self, data):
@@ -179,7 +178,7 @@ class CLEAR(_BaseMetric):
         res['MOTP'] = res['MOTP_sum'] / np.maximum(1.0, res['CLR_TP'])
         res['sMOTA'] = (res['MOTP_sum'] - res['CLR_FP'] - res['IDSW']) / np.maximum(1.0, res['CLR_TP'] + res['CLR_FN'])
 
-        res['CLR_F1'] = res['CLR_TP'] / np.maximum(1.0, res['CLR_TP'] + 0.5*res['CLR_FN'] + 0.5*res['CLR_FP'])
+        res['CLR_F1'] = res['CLR_TP'] / np.maximum(1.0, res['CLR_TP'] + 0.5 * res['CLR_FN'] + 0.5 * res['CLR_FP'])
         res['FP_per_frame'] = res['CLR_FP'] / np.maximum(1.0, res['CLR_Frames'])
         safe_log_idsw = np.log10(res['IDSW']) if res['IDSW'] > 0 else res['IDSW']
         res['MOTAL'] = (res['CLR_TP'] - res['CLR_FP'] - safe_log_idsw) / np.maximum(1.0, res['CLR_TP'] + res['CLR_FN'])

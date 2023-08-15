@@ -27,7 +27,6 @@ config = {
 
 
 def do_sequence(seq_file):
-
     # Load input data from file (e.g. provided detections)
     # data format: data['cls'][t] = {'ids', 'scores', 'im_hs', 'im_ws', 'mask_rles'}
     data = butils.load_seq(seq_file)
@@ -89,4 +88,3 @@ if __name__ == '__main__':
     else:
         for seq_todo in seqs_todo:
             do_sequence(seq_todo)
-

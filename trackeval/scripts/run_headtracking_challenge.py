@@ -1,4 +1,3 @@
-
 """ run_mot_challenge.py
 
 Run example:
@@ -71,7 +70,7 @@ if __name__ == '__main__':
             elif type(args[setting]) == type(None):
                 x = None
             elif setting == 'SEQ_INFO':
-                x = dict(zip(args[setting], [None]*len(args[setting])))
+                x = dict(zip(args[setting], [None] * len(args[setting])))
             else:
                 x = args[setting]
             config[setting] = x
@@ -83,7 +82,8 @@ if __name__ == '__main__':
     evaluator = trackeval.Evaluator(eval_config)
     dataset_list = [trackeval.datasets.HeadTrackingChallenge(dataset_config)]
     metrics_list = []
-    for metric in [trackeval.metrics.HOTA, trackeval.metrics.CLEAR, trackeval.metrics.Identity, trackeval.metrics.IDEucl]:
+    for metric in [trackeval.metrics.HOTA, trackeval.metrics.CLEAR, trackeval.metrics.Identity,
+                   trackeval.metrics.IDEucl]:
         if metric.get_name() in metrics_config['METRICS']:
             metrics_list.append(metric(metrics_config))
     if len(metrics_list) == 0:

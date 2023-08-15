@@ -52,7 +52,6 @@ def do_sequence(seq_file):
             out_file = os.path.join(out_fol, cls_id_to_name[cls], str(timestep).zfill(5) + '.png')
             butils.save_as_png(t_data, out_file, im_h, im_w)
 
-
     # Then run for all classes combined
     # Converts data from a class-separated to a class-combined format.
     data = butils.combine_classes(data)

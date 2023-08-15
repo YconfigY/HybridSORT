@@ -1,7 +1,8 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment
-from ._base_metric import _BaseMetric
-from .. import _timing
+
+from trackeval import _timing
+from trackeval.metrics._base_metric import _BaseMetric
 
 
 class VACE(_BaseMetric):
@@ -100,7 +101,7 @@ class VACE(_BaseMetric):
         for field in self.fields:
             if ignore_empty_classes:
                 res[field] = np.mean([v[field] for v in all_res.values()
-                                  if v['VACE_GT_IDs'] > 0 or v['VACE_IDs'] > 0], axis=0)
+                                      if v['VACE_GT_IDs'] > 0 or v['VACE_IDs'] > 0], axis=0)
             else:
                 res[field] = np.mean([v[field] for v in all_res.values()], axis=0)
         return res

@@ -10,7 +10,6 @@ import trackeval  # noqa: E402
 if __name__ == '__main__':
     freeze_support()
 
-
 eval_config = {'USE_PARALLEL': False,
                'NUM_PARALLEL_CORES': 8,
                'PRINT_RESULTS': False,
