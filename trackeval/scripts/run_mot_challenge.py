@@ -37,9 +37,10 @@ import os
 import argparse
 from multiprocessing import freeze_support
 
-# python TrackEval/scripts/run_mot_challenge.py --BENCHMARK MOT17 --SPLIT_TO_EVAL train --TRACKERS_TO_EVAL ByteTrack --METRICS HOTA CLEAR Identity VACE --TIME_PROGRESS False --USE_PARALLEL False --NUM_PARALLEL_CORES 1  --GT_FOLDER datasets/mot/ --TRACKERS_FOLDER YOLOX_outputs/yolox_s_mot17_half_repro1/track_results_ByteTrack/track_results --GT_LOC_FORMAT {gt_folder}/{seq}/gt/gt_val_half.txt
+# python trackeval/scripts/run_mot_challenge.py --BENCHMARK MOT17 --SPLIT_TO_EVAL train --TRACKERS_TO_EVAL ByteTrack
+# --METRICS HOTA CLEAR Identity VACE --TIME_PROGRESS False --USE_PARALLEL False --NUM_PARALLEL_CORES 1  --GT_FOLDER datasets/mot/ --TRACKERS_FOLDER YOLOX_outputs/yolox_s_mot17_half_repro1/track_results_ByteTrack/track_results --GT_LOC_FORMAT {gt_folder}/{seq}/gt/gt_val_half.txt
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from TrackEval import trackeval  # noqa: E402
+from trackeval import trackeval  # noqa: E402
 
 if __name__ == '__main__':
     freeze_support()

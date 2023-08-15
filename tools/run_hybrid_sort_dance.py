@@ -146,7 +146,7 @@ def main(exp, args, num_gpu):
     logger.info("\n" + summary)
 
     if args.dataset == "dancetrack":
-        hota_command = "python3 TrackEval/scripts/run_mot_challenge.py " \
+        hota_command = "python3 trackeval/scripts/run_mot_challenge.py " \
                        "--SPLIT_TO_EVAL val  " \
                        "--METRICS HOTA CLEAR Identity " \
                        "--GT_FOLDER datasets/dancetrack/val " \
@@ -159,7 +159,7 @@ def main(exp, args, num_gpu):
                        "--PLOT_CURVES False " \
                        "--TRACKERS_FOLDER " + results_folder
     elif args.dataset == "mot17":
-        hota_command = "python TrackEval/scripts/run_mot_challenge.py " \
+        hota_command = "python trackeval/scripts/run_mot_challenge.py " \
                        "--BENCHMARK MOT17 " \
                        "--SPLIT_TO_EVAL train " \
                        "--TRACKERS_TO_EVAL '' " \
@@ -170,7 +170,7 @@ def main(exp, args, num_gpu):
                        "--GT_FOLDER datasets/mot/ " \
                        "--TRACKERS_FOLDER " + results_folder + "--GT_LOC_FORMAT {gt_folder}/{seq}/gt/gt_val_half.txt"
     elif args.dataset == "mot20":
-        hota_command = "python TrackEval/scripts/run_mot_challenge.py " \
+        hota_command = "python trackeval/scripts/run_mot_challenge.py " \
                        "--BENCHMARK MOT20 " \
                        "--SPLIT_TO_EVAL train " \
                        "--TRACKERS_TO_EVAL '' " \

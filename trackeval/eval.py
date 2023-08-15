@@ -4,10 +4,10 @@ import traceback
 from functools import partial
 from multiprocessing.pool import Pool
 
-from TrackEval.trackeval import _timing, utils
+import _timing, utils
 
-from TrackEval.trackeval.metrics import Count
-from TrackEval.trackeval.utils import TrackEvalException
+from .metrics import Count
+from .utils import TrackEvalException
 
 
 class Evaluator:
