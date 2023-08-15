@@ -38,11 +38,9 @@ class CLEAR(_BaseMetric):
     def eval_sequence(self, data):
         """Calculates CLEAR metrics for one sequence"""
         # Initialise results
-        res = data.copy()
+        res = {}
         for field in self.fields:
             res[field] = 0
-        # res["gt_id_map"] = data["gt_id_map"]
-        # res["tracker_id_map"] = data["tracker_id_map"]
 
         # Return result quickly if tracker or gt sequence is empty
         if data['num_tracker_dets'] == 0:

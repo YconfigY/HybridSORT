@@ -20,17 +20,12 @@ class Count(_BaseMetric):
                'IDs': data['num_tracker_ids'],
                'GT_IDs': data['num_gt_ids'],
                'Frames': data['num_timesteps']}
-        for key in data.keys():
-            if key not in res:
-                res[key] = data[key]
-        # res["gt_id_map"] = data["gt_id_map"]
-        # res["tracker_id_map"] = data["tracker_id_map"]
         return res
 
     def combine_sequences(self, all_res):
         """Combines metrics across all sequences"""
         res = {}
-        for field in self.integer_fields: 
+        for field in self.integer_fields:
             res[field] = self._combine_sum(all_res, field)
         return res
 
