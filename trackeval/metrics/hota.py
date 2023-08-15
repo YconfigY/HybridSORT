@@ -3,7 +3,7 @@ import os
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 from ._base_metric import _BaseMetric
-from .. import _timing
+from TrackEval import _timing
 
 
 class HOTA(_BaseMetric):
@@ -22,26 +22,15 @@ class HOTA(_BaseMetric):
         self.summary_fields = self.float_array_fields + self.float_fields
 
     @_timing.time
-    def eval_sequence(self, data, save_path=None):
+    def eval_sequence(self, data):
         """Calculates the HOTA metrics for one sequence"""
-        """
-        data.keys:
-        dict_keys(['gt_ids', 'tracker_ids', 'gt_dets', 'tracker_dets', 
-            'tracker_confidences', 'similarity_scores', 'num_tracker_dets', 
-            'num_gt_dets', 'num_tracker_ids', 'num_gt_ids', 'num_timesteps', 'seq'])
-        """
+
         # Initialise results
-        res = data.copy()
+        res = {}
         for field in self.float_array_fields + self.integer_array_fields:
             res[field] = np.zeros((len(self.array_labels)), dtype=np.float)
         for field in self.float_fields:
             res[field] = 0
-
-        # res = data.copy()
-
-        # res["gt_id_map"] = data["gt_id_map"]
-        # res["tracker_id_map"] = data["tracker_id_map"]
-
 
         # Return result quickly if tracker or gt sequence is empty
         if data['num_tracker_dets'] == 0:
@@ -84,28 +73,22 @@ class HOTA(_BaseMetric):
             # Deal with the case that there are no gt_det/tracker_det in a timestep.
             if len(gt_ids_t) == 0:
                 for a, alpha in enumerate(self.array_labels):
-                    # if on this frame, there is no GT track, all tracker recalls are false positive
                     res['HOTA_FP'][a] += len(tracker_ids_t)
                 continue
             if len(tracker_ids_t) == 0:
                 for a, alpha in enumerate(self.array_labels):
-                    # if on this frame, there is no tracker recall, all GT track dets make false negatives
                     res['HOTA_FN'][a] += len(gt_ids_t)
                 continue
 
             # Get matching scores between pairs of dets for optimizing HOTA
             similarity = data['similarity_scores'][t]
-            # the score matrix is the global_similary * framewise similarity
             score_mat = global_alignment_score[gt_ids_t[:, np.newaxis], tracker_ids_t[np.newaxis, :]] * similarity
-            # score_mat = similarity
 
             # Hungarian algorithm to find best matches
             match_rows, match_cols = linear_sum_assignment(-score_mat)
-            # import pdb; pdb.set_trace()
 
             # Calculate and accumulate basic statistics
             for a, alpha in enumerate(self.array_labels):
-                # only if the similary (iou) is higher than the threshold alpha, the match would be valid
                 actually_matched_mask = similarity[match_rows, match_cols] >= alpha - np.finfo('float').eps
                 alpha_match_rows = match_rows[actually_matched_mask]
                 alpha_match_cols = match_cols[actually_matched_mask]
@@ -115,12 +98,10 @@ class HOTA(_BaseMetric):
                 res['HOTA_FP'][a] += len(tracker_ids_t) - num_matches
                 if num_matches > 0:
                     res['LocA'][a] += sum(similarity[alpha_match_rows, alpha_match_cols])
-                    matches_counts[a][gt_ids_t[alpha_match_rows], tracker_ids_t[alpha_match_cols]] += 1    
-        
-        """
-            Calculate association scores (AssA, AssRe, AssPr) for the alpha value.
-            First calculate scores per gt_id/tracker_id combo and then average over the number of detections.
-        """
+                    matches_counts[a][gt_ids_t[alpha_match_rows], tracker_ids_t[alpha_match_cols]] += 1
+
+        # Calculate association scores (AssA, AssRe, AssPr) for the alpha value.
+        # First calculate scores per gt_id/tracker_id combo and then average over the number of detections.
         for a, alpha in enumerate(self.array_labels):
             matches_count = matches_counts[a]
             ass_a = matches_count / np.maximum(1, gt_id_count + tracker_id_count - matches_count)
@@ -132,10 +113,7 @@ class HOTA(_BaseMetric):
 
         # Calculate final scores
         res['LocA'] = np.maximum(1e-10, res['LocA']) / np.maximum(1e-10, res['HOTA_TP'])
-        res["matches_counts"] = matches_counts
         res = self._compute_final_fields(res)
-        # os.makedirs(save_path, exist_ok=True)
-        # np.save(os.path.join(save_path, "matches_count.pth"), matches_count)
         return res
 
     def combine_sequences(self, all_res):

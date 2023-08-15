@@ -6,8 +6,8 @@ import traceback
 import numpy as np
 from copy import deepcopy
 from abc import ABC, abstractmethod
-from .. import _timing
-from ..utils import TrackEvalException
+from TrackEval import _timing
+from TrackEval.utils import TrackEvalException
 
 
 class _BaseDataset(ABC):

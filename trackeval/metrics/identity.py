@@ -1,8 +1,8 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 from ._base_metric import _BaseMetric
-from .. import _timing
-from .. import utils
+from TrackEval import _timing
+from TrackEval import utils
 
 
 class Identity(_BaseMetric):
@@ -32,12 +32,9 @@ class Identity(_BaseMetric):
     def eval_sequence(self, data):
         """Calculates ID metrics for one sequence"""
         # Initialise results
-        res = data.copy()
+        res = {}
         for field in self.fields:
             res[field] = 0
-        
-        # res["gt_id_map"] = data["gt_id_map"]
-        # res["tracker_id_map"] = data["tracker_id_map"]
 
         # Return result quickly if tracker or gt sequence is empty
         if data['num_tracker_dets'] == 0:

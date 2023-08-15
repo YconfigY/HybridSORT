@@ -4,13 +4,13 @@ import configparser
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 from ._base_dataset import _BaseDataset
-from .. import utils
-from .. import _timing
-from ..utils import TrackEvalException
+from TrackEval import utils
+from TrackEval import _timing
+from TrackEval.utils import TrackEvalException
 
 
-class HeadTrackingChallenge(_BaseDataset):
-    """Dataset class for Head Tracking Challenge - 2D bounding box tracking"""
+class MOTSChallenge(_BaseDataset):
+    """Dataset class for MOTS Challenge tracking"""
 
     @staticmethod
     def get_default_dataset_config():
@@ -22,21 +22,19 @@ class HeadTrackingChallenge(_BaseDataset):
             'OUTPUT_FOLDER': None,  # Where to save eval results (if None, same as TRACKERS_FOLDER)
             'TRACKERS_TO_EVAL': None,  # Filenames of trackers to eval (if None, all in folder)
             'CLASSES_TO_EVAL': ['pedestrian'],  # Valid: ['pedestrian']
-            'BENCHMARK': 'HT',  # Valid: 'HT'. Refers to "Head Tracking or the dataset CroHD"
-            'SPLIT_TO_EVAL': 'train',  # Valid: 'train', 'test', 'all'
+            'SPLIT_TO_EVAL': 'train',  # Valid: 'train', 'test'
             'INPUT_AS_ZIP': False,  # Whether tracker input files are zipped
             'PRINT_CONFIG': True,  # Whether to print current config
-            'DO_PREPROC': True,  # Whether to perform preprocessing (never done for MOT15)
             'TRACKER_SUB_FOLDER': 'data',  # Tracker files are in TRACKER_FOLDER/tracker_name/TRACKER_SUB_FOLDER
             'OUTPUT_SUB_FOLDER': '',  # Output files are saved in OUTPUT_FOLDER/tracker_name/OUTPUT_SUB_FOLDER
             'TRACKER_DISPLAY_NAMES': None,  # Names of trackers to display, if None: TRACKERS_TO_EVAL
             'SEQMAP_FOLDER': None,  # Where seqmaps are found (if None, GT_FOLDER/seqmaps)
-            'SEQMAP_FILE': None,  # Directly specify seqmap file (if none use seqmap_folder/benchmark-split_to_eval)
+            'SEQMAP_FILE': None,  # Directly specify seqmap file (if none use seqmap_folder/MOTS-split_to_eval)
             'SEQ_INFO': None,  # If not None, directly specify sequences to eval and their number of timesteps
             'GT_LOC_FORMAT': '{gt_folder}/{seq}/gt/gt.txt',  # '{gt_folder}/{seq}/gt/gt.txt'
-            'SKIP_SPLIT_FOL': False,  # If False, data is in GT_FOLDER/BENCHMARK-SPLIT_TO_EVAL/ and in
-                                      # TRACKERS_FOLDER/BENCHMARK-SPLIT_TO_EVAL/tracker/
-                                      # If True, then the middle 'benchmark-split' folder is skipped for both.
+            'SKIP_SPLIT_FOL': False,  # If False, data is in GT_FOLDER/MOTS-SPLIT_TO_EVAL/ and in
+                                      # TRACKERS_FOLDER/MOTS-SPLIT_TO_EVAL/tracker/
+                                      # If True, then the middle 'MOTS-split' folder is skipped for both.
         }
         return default_config
 
@@ -46,11 +44,10 @@ class HeadTrackingChallenge(_BaseDataset):
         # Fill non-given config values with defaults
         self.config = utils.init_config(config, self.get_default_dataset_config(), self.get_name())
 
-        self.benchmark = self.config['BENCHMARK']
-        gt_set = self.config['BENCHMARK'] + '-' + self.config['SPLIT_TO_EVAL']
-        self.gt_set = gt_set
+        self.benchmark = 'MOTS'
+        self.gt_set = self.benchmark + '-' + self.config['SPLIT_TO_EVAL']
         if not self.config['SKIP_SPLIT_FOL']:
-            split_fol = gt_set
+            split_fol = self.gt_set
         else:
             split_fol = ''
         self.gt_fol = os.path.join(self.config['GT_FOLDER'], split_fol)
@@ -58,7 +55,6 @@ class HeadTrackingChallenge(_BaseDataset):
         self.should_classes_combine = False
         self.use_super_categories = False
         self.data_is_zipped = self.config['INPUT_AS_ZIP']
-        self.do_preproc = self.config['DO_PREPROC']
 
         self.output_fol = self.config['OUTPUT_FOLDER']
         if self.output_fol is None:
@@ -73,8 +69,7 @@ class HeadTrackingChallenge(_BaseDataset):
                            for cls in self.config['CLASSES_TO_EVAL']]
         if not all(self.class_list):
             raise TrackEvalException('Attempted to evaluate an invalid class. Only pedestrian class is valid.')
-        self.class_name_to_class_id = {'pedestrian': 1, 'static': 2, 'ignore': 3, 'person_on_vehicle': 4}
-        self.valid_class_numbers = list(self.class_name_to_class_id.values())
+        self.class_name_to_class_id = {'pedestrian': '2', 'ignore': '10'}
 
         # Get sequences to eval and check gt files exist
         self.seq_list, self.seq_lengths = self._get_seq_info()
@@ -170,17 +165,21 @@ class HeadTrackingChallenge(_BaseDataset):
         return seq_list, seq_lengths
 
     def _load_raw_file(self, tracker, seq, is_gt):
-        """Load a file (gt or tracker) in the MOT Challenge 2D box format
+        """Load a file (gt or tracker) in the MOTS Challenge format
 
         If is_gt, this returns a dict which contains the fields:
         [gt_ids, gt_classes] : list (for each timestep) of 1D NDArrays (for each det).
-        [gt_dets, gt_crowd_ignore_regions]: list (for each timestep) of lists of detections.
-        [gt_extras] : list (for each timestep) of dicts (for each extra) of 1D NDArrays (for each det).
+        [gt_dets]: list (for each timestep) of lists of detections.
+        [gt_ignore_region]: list (for each timestep) of masks for the ignore regions
 
         if not is_gt, this returns a dict which contains the fields:
-        [tracker_ids, tracker_classes, tracker_confidences] : list (for each timestep) of 1D NDArrays (for each det).
+        [tracker_ids, tracker_classes] : list (for each timestep) of 1D NDArrays (for each det).
         [tracker_dets]: list (for each timestep) of lists of detections.
         """
+
+        # Only loaded when run to reduce minimum requirements
+        from pycocotools import mask as mask_utils
+
         # File location
         if self.data_is_zipped:
             if is_gt:
@@ -195,24 +194,26 @@ class HeadTrackingChallenge(_BaseDataset):
             else:
                 file = os.path.join(self.tracker_fol, tracker, self.tracker_sub_fol, seq + '.txt')
 
+        # Ignore regions
+        if is_gt:
+            crowd_ignore_filter = {2: ['10']}
+        else:
+            crowd_ignore_filter = None
+
         # Load raw data from text file
-        read_data, ignore_data = self._load_simple_text_file(file, is_zipped=self.data_is_zipped, zip_file=zip_file)
+        read_data, ignore_data = self._load_simple_text_file(file, crowd_ignore_filter=crowd_ignore_filter,
+                                                             is_zipped=self.data_is_zipped, zip_file=zip_file,
+                                                             force_delimiters=' ')
 
         # Convert data to required format
         num_timesteps = self.seq_lengths[seq]
         data_keys = ['ids', 'classes', 'dets']
         if is_gt:
-            data_keys += ['gt_crowd_ignore_regions', 'gt_extras']
-        else:
-            data_keys += ['tracker_confidences']
-
-        if self.benchmark == 'HT':
-            data_keys += ['visibility']
-            data_keys += ['gt_conf']
+            data_keys += ['gt_ignore_region']
         raw_data = {key: [None] * num_timesteps for key in data_keys}
 
         # Check for any extra time keys
-        current_time_keys = [str( t+ 1) for t in range(num_timesteps)]
+        current_time_keys = [str(t + 1) for t in range(num_timesteps)]
         extra_time_keys = [x for x in read_data.keys() if x not in current_time_keys]
         if len(extra_time_keys) > 0:
             if is_gt:
@@ -225,56 +226,49 @@ class HeadTrackingChallenge(_BaseDataset):
 
         for t in range(num_timesteps):
             time_key = str(t+1)
+            # list to collect all masks of a timestep to check for overlapping areas
+            all_masks = []
             if time_key in read_data.keys():
                 try:
-                    time_data = np.asarray(read_data[time_key], dtype=np.float)
-                except ValueError:
-                    if is_gt:
-                        raise TrackEvalException(
-                            'Cannot convert gt data for sequence %s to float. Is data corrupted?' % seq)
-                    else:
-                        raise TrackEvalException(
-                            'Cannot convert tracking data from tracker %s, sequence %s to float. Is data corrupted?' % (
-                                tracker, seq))
-                try:
-                    raw_data['dets'][t] = np.atleast_2d(time_data[:, 2:6])
-                    raw_data['ids'][t] = np.atleast_1d(time_data[:, 1]).astype(int)
+                    raw_data['dets'][t] = [{'size': [int(region[3]), int(region[4])],
+                                            'counts': region[5].encode(encoding='UTF-8')}
+                                           for region in read_data[time_key]]
+                    raw_data['ids'][t] = np.atleast_1d([region[1] for region in read_data[time_key]]).astype(int)
+                    raw_data['classes'][t] = np.atleast_1d([region[2] for region in read_data[time_key]]).astype(int)
+                    all_masks += raw_data['dets'][t]
                 except IndexError:
-                    if is_gt:
-                        err = 'Cannot load gt data from sequence %s, because there is not enough ' \
-                              'columns in the data.' % seq
-                        raise TrackEvalException(err)
-                    else:
-                        err = 'Cannot load tracker data from tracker %s, sequence %s, because there is not enough ' \
-                              'columns in the data.' % (tracker, seq)
-                        raise TrackEvalException(err)
-                if time_data.shape[1] >= 8:
-                    raw_data['gt_conf'][t] = np.atleast_1d(time_data[:, 6]).astype(float)
-                    raw_data['visibility'][t] = np.atleast_1d(time_data[:, 8]).astype(float)
-                    raw_data['classes'][t] = np.atleast_1d(time_data[:, 7]).astype(int)
-                else:
-                    if not is_gt:
-                        raw_data['classes'][t] = np.ones_like(raw_data['ids'][t])
-                    else:
-                        raise TrackEvalException(
-                            'GT data is not in a valid format, there is not enough rows in seq %s, timestep %i.' % (
-                                seq, t))
-                if is_gt:
-                    gt_extras_dict = {'zero_marked': np.atleast_1d(time_data[:, 6].astype(int))}
-                    raw_data['gt_extras'][t] = gt_extras_dict
-                else:
-                    raw_data['tracker_confidences'][t] = np.atleast_1d(time_data[:, 6])
+                    self._raise_index_error(is_gt, tracker, seq)
+                except ValueError:
+                    self._raise_value_error(is_gt, tracker, seq)
             else:
-                raw_data['dets'][t] = np.empty((0, 4))
+                raw_data['dets'][t] = []
                 raw_data['ids'][t] = np.empty(0).astype(int)
                 raw_data['classes'][t] = np.empty(0).astype(int)
-                if is_gt:
-                    gt_extras_dict = {'zero_marked': np.empty(0)}
-                    raw_data['gt_extras'][t] = gt_extras_dict
-                else:
-                    raw_data['tracker_confidences'][t] = np.empty(0)
             if is_gt:
-                raw_data['gt_crowd_ignore_regions'][t] = np.empty((0, 4))
+                if time_key in ignore_data.keys():
+                    try:
+                        time_ignore = [{'size': [int(region[3]), int(region[4])],
+                                        'counts': region[5].encode(encoding='UTF-8')}
+                                       for region in ignore_data[time_key]]
+                        raw_data['gt_ignore_region'][t] = mask_utils.merge([mask for mask in time_ignore],
+                                                                           intersect=False)
+                        all_masks += [raw_data['gt_ignore_region'][t]]
+                    except IndexError:
+                        self._raise_index_error(is_gt, tracker, seq)
+                    except ValueError:
+                        self._raise_value_error(is_gt, tracker, seq)
+                else:
+                    raw_data['gt_ignore_region'][t] = mask_utils.merge([], intersect=False)
+
+            # check for overlapping masks
+            if all_masks:
+                masks_merged = all_masks[0]
+                for mask in all_masks[1:]:
+                    if mask_utils.area(mask_utils.merge([masks_merged, mask], intersect=True)) != 0.0:
+                        raise TrackEvalException(
+                            'Tracker has overlapping masks. Tracker: ' + tracker + ' Seq: ' + seq + ' Timestep: ' + str(
+                                t))
+                    masks_merged = mask_utils.merge([masks_merged, mask], intersect=False)
 
         if is_gt:
             key_map = {'ids': 'gt_ids',
@@ -300,8 +294,8 @@ class HeadTrackingChallenge(_BaseDataset):
              - data is a dict containing all of the information that metrics need to perform evaluation.
                 It contains the following fields:
                     [num_timesteps, num_gt_ids, num_tracker_ids, num_gt_dets, num_tracker_dets] : integers.
-                    [gt_ids, tracker_ids, tracker_confidences]: list (for each timestep) of 1D NDArrays (for each det).
-                    [gt_dets, tracker_dets]: list (for each timestep) of lists of detections.
+                    [gt_ids, tracker_ids]: list (for each timestep) of 1D NDArrays (for each det).
+                    [gt_dets, tracker_dets]: list (for each timestep) of lists of detection masks.
                     [similarity_scores]: list (for each timestep) of 2D NDArrays.
         Notes:
             General preprocessing (preproc) occurs in 4 steps. Some datasets may not use all of these steps.
@@ -315,26 +309,20 @@ class HeadTrackingChallenge(_BaseDataset):
                 and unique track ids. It also relabels gt and tracker ids to be contiguous and checks that ids are
                 unique within each timestep.
 
-        MOT Challenge:
-            In MOT Challenge, the 4 preproc steps are as follow:
-                1) There is only one class (pedestrian) to be evaluated, but all other classes are used for preproc.
-                2) Predictions are matched against all gt boxes (regardless of class), those matching with distractor
-                    objects are removed.
-                3) There is no crowd ignore regions.
-                4) All gt dets except pedestrian are removed, also removes pedestrian gt dets marked with zero_marked.
+        MOTS Challenge:
+            In MOTS Challenge, the 4 preproc steps are as follow:
+                1) There is only one class (pedestrians) to be evaluated.
+                2) There are no ground truth detections marked as to be removed/distractor classes.
+                    Therefore also no matched tracker detections are removed.
+                3) Ignore regions are used to remove unmatched detections (at least 50% overlap with ignore region).
+                4) There are no ground truth detections (e.g. those of distractor classes) to be removed.
         """
         # Check that input data has unique ids
         self._check_unique_ids(raw_data)
 
-        # 'static': 2, 'ignore': 3, 'person_on_vehicle':
+        cls_id = int(self.class_name_to_class_id[cls])
 
-        distractor_class_names = ['static', 'ignore', 'person_on_vehicle']
-
-        distractor_classes = [self.class_name_to_class_id[x] for x in distractor_class_names]
-        cls_id = self.class_name_to_class_id[cls]
-
-        data_keys = ['gt_ids', 'tracker_ids', 'gt_dets', 'tracker_dets', 'tracker_confidences',
-                     'similarity_scores', 'gt_visibility']
+        data_keys = ['gt_ids', 'tracker_ids', 'gt_dets', 'tracker_dets', 'similarity_scores']
         data = {key: [None] * raw_data['num_timesteps'] for key in data_keys}
         unique_gt_ids = []
         unique_tracker_ids = []
@@ -342,88 +330,52 @@ class HeadTrackingChallenge(_BaseDataset):
         num_tracker_dets = 0
         for t in range(raw_data['num_timesteps']):
 
-            # Get all data
-            gt_ids = raw_data['gt_ids'][t]
-            gt_dets = raw_data['gt_dets'][t]
-            gt_classes = raw_data['gt_classes'][t]
-            gt_visibility = raw_data['visibility'][t]
-            gt_conf = raw_data['gt_conf'][t]
+            # Only extract relevant dets for this class for preproc and eval (cls)
+            gt_class_mask = np.atleast_1d(raw_data['gt_classes'][t] == cls_id)
+            gt_class_mask = gt_class_mask.astype(np.bool)
+            gt_ids = raw_data['gt_ids'][t][gt_class_mask]
+            gt_dets = [raw_data['gt_dets'][t][ind] for ind in range(len(gt_class_mask)) if gt_class_mask[ind]]
 
-            gt_zero_marked = raw_data['gt_extras'][t]['zero_marked']
+            tracker_class_mask = np.atleast_1d(raw_data['tracker_classes'][t] == cls_id)
+            tracker_class_mask = tracker_class_mask.astype(np.bool)
+            tracker_ids = raw_data['tracker_ids'][t][tracker_class_mask]
+            tracker_dets = [raw_data['tracker_dets'][t][ind] for ind in range(len(tracker_class_mask)) if
+                            tracker_class_mask[ind]]
+            similarity_scores = raw_data['similarity_scores'][t][gt_class_mask, :][:, tracker_class_mask]
 
-            tracker_ids = raw_data['tracker_ids'][t]
-            tracker_dets = raw_data['tracker_dets'][t]
-            tracker_classes = raw_data['tracker_classes'][t]
-            tracker_confidences = raw_data['tracker_confidences'][t]
-            similarity_scores = raw_data['similarity_scores'][t]
-
-            # Evaluation is ONLY valid for pedestrian class
-            if len(tracker_classes) > 0 and np.max(tracker_classes) > 1:
-                raise TrackEvalException(
-                    'Evaluation is only valid for pedestrian class. Non pedestrian class (%i) found in sequence %s at '
-                    'timestep %i.' % (np.max(tracker_classes), raw_data['seq'], t))
-
-            # Match tracker and gt dets (with hungarian algorithm) and remove tracker dets which match with gt dets
-            # which are labeled as belonging to a distractor class.
-            to_remove_tracker = np.array([], np.int)
-            if self.do_preproc and self.benchmark != 'MOT15' and gt_ids.shape[0] > 0 and tracker_ids.shape[0] > 0:
-
-                # Check all classes are valid:
-                invalid_classes = np.setdiff1d(np.unique(gt_classes), self.valid_class_numbers)
-                if len(invalid_classes) > 0:
-                    print(' '.join([str(x) for x in invalid_classes]))
-                    raise(TrackEvalException('Attempting to evaluate using invalid gt classes. '
-                                             'This warning only triggers if preprocessing is performed, '
-                                             'e.g. not for MOT15 or where prepropressing is explicitly disabled. '
-                                             'Please either check your gt data, or disable preprocessing. '
-                                             'The following invalid classes were found in timestep ' + str(t) + ': ' +
-                                             ' '.join([str(x) for x in invalid_classes])))
-
+            # Match tracker and gt dets (with hungarian algorithm)
+            unmatched_indices = np.arange(tracker_ids.shape[0])
+            if gt_ids.shape[0] > 0 and tracker_ids.shape[0] > 0:
                 matching_scores = similarity_scores.copy()
-
-                matching_scores[matching_scores < 0.4 - np.finfo('float').eps] = 0
-
+                matching_scores[matching_scores < 0.5 - np.finfo('float').eps] = -10000
                 match_rows, match_cols = linear_sum_assignment(-matching_scores)
                 actually_matched_mask = matching_scores[match_rows, match_cols] > 0 + np.finfo('float').eps
-                match_rows = match_rows[actually_matched_mask]
                 match_cols = match_cols[actually_matched_mask]
 
-                is_distractor_class = np.logical_not(np.isin(gt_classes[match_rows], cls_id))
-                if self.benchmark == 'HT':
-                    is_invisible_class = gt_visibility[match_rows] < np.finfo('float').eps
-                    low_conf_class = gt_conf[match_rows] < np.finfo('float').eps
-                    are_distractors = np.logical_or(is_invisible_class, is_distractor_class, low_conf_class)
-                    to_remove_tracker = match_cols[are_distractors]
-                else:
-                    to_remove_tracker = match_cols[is_distractor_class]
+                unmatched_indices = np.delete(unmatched_indices, match_cols, axis=0)
 
-            # Apply preprocessing to remove all unwanted tracker dets.
+            # For unmatched tracker dets, remove those that are greater than 50% within a crowd ignore region.
+            unmatched_tracker_dets = [tracker_dets[i] for i in range(len(tracker_dets)) if i in unmatched_indices]
+            ignore_region = raw_data['gt_ignore_region'][t]
+            intersection_with_ignore_region = self._calculate_mask_ious(unmatched_tracker_dets, [ignore_region],
+                                                                        is_encoded=True, do_ioa=True)
+            is_within_ignore_region = np.any(intersection_with_ignore_region > 0.5 + np.finfo('float').eps, axis=1)
+
+            # Apply preprocessing to remove unwanted tracker dets.
+            to_remove_tracker = unmatched_indices[is_within_ignore_region]
             data['tracker_ids'][t] = np.delete(tracker_ids, to_remove_tracker, axis=0)
             data['tracker_dets'][t] = np.delete(tracker_dets, to_remove_tracker, axis=0)
-            data['tracker_confidences'][t] = np.delete(tracker_confidences, to_remove_tracker, axis=0)
             similarity_scores = np.delete(similarity_scores, to_remove_tracker, axis=1)
 
-            # Remove gt detections marked as to remove (zero marked), and also remove gt detections not in pedestrian
-            if self.do_preproc and self.benchmark == 'HT':
-                gt_to_keep_mask = (np.not_equal(gt_zero_marked, 0)) & \
-                                  (np.equal(gt_classes, cls_id)) & \
-                                  (gt_visibility > 0.) & \
-                                  (gt_conf > 0.)
-
-            else:
-                # There are no classes for MOT15
-                gt_to_keep_mask = np.not_equal(gt_zero_marked, 0)
-            data['gt_ids'][t] = gt_ids[gt_to_keep_mask]
-            data['gt_dets'][t] = gt_dets[gt_to_keep_mask, :]
-            data['similarity_scores'][t] = similarity_scores[gt_to_keep_mask]
-            data['gt_visibility'][t] = gt_visibility # No mask!
-
+            # Keep all ground truth detections
+            data['gt_ids'][t] = gt_ids
+            data['gt_dets'][t] = gt_dets
+            data['similarity_scores'][t] = similarity_scores
 
             unique_gt_ids += list(np.unique(data['gt_ids'][t]))
             unique_tracker_ids += list(np.unique(data['tracker_ids'][t]))
             num_tracker_dets += len(data['tracker_ids'][t])
             num_gt_dets += len(data['gt_ids'][t])
-
 
         # Re-label IDs such that there are no empty IDs
         if len(unique_gt_ids) > 0:
@@ -455,5 +407,40 @@ class HeadTrackingChallenge(_BaseDataset):
         return data
 
     def _calculate_similarities(self, gt_dets_t, tracker_dets_t):
-        similarity_scores = self._calculate_box_ious(gt_dets_t, tracker_dets_t, box_format='xywh')
+        similarity_scores = self._calculate_mask_ious(gt_dets_t, tracker_dets_t, is_encoded=True, do_ioa=False)
         return similarity_scores
+
+    @staticmethod
+    def _raise_index_error(is_gt, tracker, seq):
+        """
+        Auxiliary method to raise an evaluation error in case of an index error while reading files.
+        :param is_gt: whether gt or tracker data is read
+        :param tracker: the name of the tracker
+        :param seq: the name of the seq
+        :return: None
+        """
+        if is_gt:
+            err = 'Cannot load gt data from sequence %s, because there are not enough ' \
+                  'columns in the data.' % seq
+            raise TrackEvalException(err)
+        else:
+            err = 'Cannot load tracker data from tracker %s, sequence %s, because there are not enough ' \
+                  'columns in the data.' % (tracker, seq)
+            raise TrackEvalException(err)
+
+    @staticmethod
+    def _raise_value_error(is_gt, tracker, seq):
+        """
+        Auxiliary method to raise an evaluation error in case of an value error while reading files.
+        :param is_gt: whether gt or tracker data is read
+        :param tracker: the name of the tracker
+        :param seq: the name of the seq
+        :return: None
+        """
+        if is_gt:
+            raise TrackEvalException(
+                'GT data for sequence %s cannot be converted to the right format. Is data corrupted?' % seq)
+        else:
+            raise TrackEvalException(
+                'Tracking data from tracker %s, sequence %s cannot be converted to the right format. '
+                'Is data corrupted?' % (tracker, seq))

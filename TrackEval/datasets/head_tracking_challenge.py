@@ -4,13 +4,13 @@ import configparser
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 from ._base_dataset import _BaseDataset
-from .. import utils
-from .. import _timing
-from ..utils import TrackEvalException
+from TrackEval import utils
+from TrackEval import _timing
+from TrackEval.utils import TrackEvalException
 
 
-class MotChallenge2DBox(_BaseDataset):
-    """Dataset class for MOT Challenge 2D bounding box tracking"""
+class HeadTrackingChallenge(_BaseDataset):
+    """Dataset class for Head Tracking Challenge - 2D bounding box tracking"""
 
     @staticmethod
     def get_default_dataset_config():
@@ -22,7 +22,7 @@ class MotChallenge2DBox(_BaseDataset):
             'OUTPUT_FOLDER': None,  # Where to save eval results (if None, same as TRACKERS_FOLDER)
             'TRACKERS_TO_EVAL': None,  # Filenames of trackers to eval (if None, all in folder)
             'CLASSES_TO_EVAL': ['pedestrian'],  # Valid: ['pedestrian']
-            'BENCHMARK': 'MOT17',  # Valid: 'MOT17', 'MOT16', 'MOT20', 'MOT15'
+            'BENCHMARK': 'HT',  # Valid: 'HT'. Refers to "Head Tracking or the dataset CroHD"
             'SPLIT_TO_EVAL': 'train',  # Valid: 'train', 'test', 'all'
             'INPUT_AS_ZIP': False,  # Whether tracker input files are zipped
             'PRINT_CONFIG': True,  # Whether to print current config
@@ -35,8 +35,8 @@ class MotChallenge2DBox(_BaseDataset):
             'SEQ_INFO': None,  # If not None, directly specify sequences to eval and their number of timesteps
             'GT_LOC_FORMAT': '{gt_folder}/{seq}/gt/gt.txt',  # '{gt_folder}/{seq}/gt/gt.txt'
             'SKIP_SPLIT_FOL': False,  # If False, data is in GT_FOLDER/BENCHMARK-SPLIT_TO_EVAL/ and in
-            # TRACKERS_FOLDER/BENCHMARK-SPLIT_TO_EVAL/tracker/
-            # If True, then the middle 'benchmark-split' folder is skipped for both.
+                                      # TRACKERS_FOLDER/BENCHMARK-SPLIT_TO_EVAL/tracker/
+                                      # If True, then the middle 'benchmark-split' folder is skipped for both.
         }
         return default_config
 
@@ -47,14 +47,14 @@ class MotChallenge2DBox(_BaseDataset):
         self.config = utils.init_config(config, self.get_default_dataset_config(), self.get_name())
 
         self.benchmark = self.config['BENCHMARK']
-        gt_set = self.config['SPLIT_TO_EVAL']  # TODO: [hgx 0401]: delete "self.config['BENCHMARK'] + '-' +"
+        gt_set = self.config['BENCHMARK'] + '-' + self.config['SPLIT_TO_EVAL']
         self.gt_set = gt_set
         if not self.config['SKIP_SPLIT_FOL']:
             split_fol = gt_set
         else:
             split_fol = ''
         self.gt_fol = os.path.join(self.config['GT_FOLDER'], split_fol)
-        self.tracker_fol = os.path.join(self.config['TRACKERS_FOLDER'])  # TODO: [hgx 0401]: delete "split_fol"
+        self.tracker_fol = os.path.join(self.config['TRACKERS_FOLDER'], split_fol)
         self.should_classes_combine = False
         self.use_super_categories = False
         self.data_is_zipped = self.config['INPUT_AS_ZIP']
@@ -73,9 +73,7 @@ class MotChallenge2DBox(_BaseDataset):
                            for cls in self.config['CLASSES_TO_EVAL']]
         if not all(self.class_list):
             raise TrackEvalException('Attempted to evaluate an invalid class. Only pedestrian class is valid.')
-        self.class_name_to_class_id = {'pedestrian': 1, 'person_on_vehicle': 2, 'car': 3, 'bicycle': 4, 'motorbike': 5,
-                                       'non_mot_vehicle': 6, 'static_person': 7, 'distractor': 8, 'occluder': 9,
-                                       'occluder_on_ground': 10, 'occluder_full': 11, 'reflection': 12, 'crowd': 13}
+        self.class_name_to_class_id = {'pedestrian': 1, 'static': 2, 'ignore': 3, 'person_on_vehicle': 4}
         self.valid_class_numbers = list(self.class_name_to_class_id.values())
 
         # Get sequences to eval and check gt files exist
@@ -118,8 +116,7 @@ class MotChallenge2DBox(_BaseDataset):
                     raise TrackEvalException('Tracker file not found: ' + tracker + '/' + os.path.basename(curr_file))
             else:
                 for seq in self.seq_list:
-                    # TODO: [hgx 0401], delete "tracker, self.tracker_sub_fol"
-                    curr_file = os.path.join(self.tracker_fol, seq + '.txt')
+                    curr_file = os.path.join(self.tracker_fol, tracker, self.tracker_sub_fol, seq + '.txt')
                     if not os.path.isfile(curr_file):
                         print('Tracker file not found: ' + curr_file)
                         raise TrackEvalException(
@@ -196,8 +193,7 @@ class MotChallenge2DBox(_BaseDataset):
             if is_gt:
                 file = self.config["GT_LOC_FORMAT"].format(gt_folder=self.gt_fol, seq=seq)
             else:
-                file = os.path.join(self.tracker_fol,
-                                    seq + '.txt')  # TODO: [hgx 0401], delete "tracker, self.tracker_sub_fol"
+                file = os.path.join(self.tracker_fol, tracker, self.tracker_sub_fol, seq + '.txt')
 
         # Load raw data from text file
         read_data, ignore_data = self._load_simple_text_file(file, is_zipped=self.data_is_zipped, zip_file=zip_file)
@@ -209,10 +205,14 @@ class MotChallenge2DBox(_BaseDataset):
             data_keys += ['gt_crowd_ignore_regions', 'gt_extras']
         else:
             data_keys += ['tracker_confidences']
+
+        if self.benchmark == 'HT':
+            data_keys += ['visibility']
+            data_keys += ['gt_conf']
         raw_data = {key: [None] * num_timesteps for key in data_keys}
 
         # Check for any extra time keys
-        current_time_keys = [str(t + 1) for t in range(num_timesteps)]
+        current_time_keys = [str( t+ 1) for t in range(num_timesteps)]
         extra_time_keys = [x for x in read_data.keys() if x not in current_time_keys]
         if len(extra_time_keys) > 0:
             if is_gt:
@@ -224,7 +224,7 @@ class MotChallenge2DBox(_BaseDataset):
                     [str(x) + ', ' for x in extra_time_keys]))
 
         for t in range(num_timesteps):
-            time_key = str(t + 1)
+            time_key = str(t+1)
             if time_key in read_data.keys():
                 try:
                     time_data = np.asarray(read_data[time_key], dtype=np.float)
@@ -249,6 +249,8 @@ class MotChallenge2DBox(_BaseDataset):
                               'columns in the data.' % (tracker, seq)
                         raise TrackEvalException(err)
                 if time_data.shape[1] >= 8:
+                    raw_data['gt_conf'][t] = np.atleast_1d(time_data[:, 6]).astype(float)
+                    raw_data['visibility'][t] = np.atleast_1d(time_data[:, 8]).astype(float)
                     raw_data['classes'][t] = np.atleast_1d(time_data[:, 7]).astype(int)
                 else:
                     if not is_gt:
@@ -324,13 +326,15 @@ class MotChallenge2DBox(_BaseDataset):
         # Check that input data has unique ids
         self._check_unique_ids(raw_data)
 
-        distractor_class_names = ['person_on_vehicle', 'static_person', 'distractor', 'reflection']
-        if self.benchmark == 'MOT20':
-            distractor_class_names.append('non_mot_vehicle')
+        # 'static': 2, 'ignore': 3, 'person_on_vehicle':
+
+        distractor_class_names = ['static', 'ignore', 'person_on_vehicle']
+
         distractor_classes = [self.class_name_to_class_id[x] for x in distractor_class_names]
         cls_id = self.class_name_to_class_id[cls]
 
-        data_keys = ['gt_ids', 'tracker_ids', 'gt_dets', 'tracker_dets', 'tracker_confidences', 'similarity_scores']
+        data_keys = ['gt_ids', 'tracker_ids', 'gt_dets', 'tracker_dets', 'tracker_confidences',
+                     'similarity_scores', 'gt_visibility']
         data = {key: [None] * raw_data['num_timesteps'] for key in data_keys}
         unique_gt_ids = []
         unique_tracker_ids = []
@@ -342,6 +346,9 @@ class MotChallenge2DBox(_BaseDataset):
             gt_ids = raw_data['gt_ids'][t]
             gt_dets = raw_data['gt_dets'][t]
             gt_classes = raw_data['gt_classes'][t]
+            gt_visibility = raw_data['visibility'][t]
+            gt_conf = raw_data['gt_conf'][t]
+
             gt_zero_marked = raw_data['gt_extras'][t]['zero_marked']
 
             tracker_ids = raw_data['tracker_ids'][t]
@@ -365,22 +372,30 @@ class MotChallenge2DBox(_BaseDataset):
                 invalid_classes = np.setdiff1d(np.unique(gt_classes), self.valid_class_numbers)
                 if len(invalid_classes) > 0:
                     print(' '.join([str(x) for x in invalid_classes]))
-                    raise (TrackEvalException('Attempting to evaluate using invalid gt classes. '
-                                              'This warning only triggers if preprocessing is performed, '
-                                              'e.g. not for MOT15 or where prepropressing is explicitly disabled. '
-                                              'Please either check your gt data, or disable preprocessing. '
-                                              'The following invalid classes were found in timestep ' + str(t) + ': ' +
-                                              ' '.join([str(x) for x in invalid_classes])))
+                    raise(TrackEvalException('Attempting to evaluate using invalid gt classes. '
+                                             'This warning only triggers if preprocessing is performed, '
+                                             'e.g. not for MOT15 or where prepropressing is explicitly disabled. '
+                                             'Please either check your gt data, or disable preprocessing. '
+                                             'The following invalid classes were found in timestep ' + str(t) + ': ' +
+                                             ' '.join([str(x) for x in invalid_classes])))
 
                 matching_scores = similarity_scores.copy()
-                matching_scores[matching_scores < 0.5 - np.finfo('float').eps] = 0
+
+                matching_scores[matching_scores < 0.4 - np.finfo('float').eps] = 0
+
                 match_rows, match_cols = linear_sum_assignment(-matching_scores)
                 actually_matched_mask = matching_scores[match_rows, match_cols] > 0 + np.finfo('float').eps
                 match_rows = match_rows[actually_matched_mask]
                 match_cols = match_cols[actually_matched_mask]
 
-                is_distractor_class = np.isin(gt_classes[match_rows], distractor_classes)
-                to_remove_tracker = match_cols[is_distractor_class]
+                is_distractor_class = np.logical_not(np.isin(gt_classes[match_rows], cls_id))
+                if self.benchmark == 'HT':
+                    is_invisible_class = gt_visibility[match_rows] < np.finfo('float').eps
+                    low_conf_class = gt_conf[match_rows] < np.finfo('float').eps
+                    are_distractors = np.logical_or(is_invisible_class, is_distractor_class, low_conf_class)
+                    to_remove_tracker = match_cols[are_distractors]
+                else:
+                    to_remove_tracker = match_cols[is_distractor_class]
 
             # Apply preprocessing to remove all unwanted tracker dets.
             data['tracker_ids'][t] = np.delete(tracker_ids, to_remove_tracker, axis=0)
@@ -389,21 +404,26 @@ class MotChallenge2DBox(_BaseDataset):
             similarity_scores = np.delete(similarity_scores, to_remove_tracker, axis=1)
 
             # Remove gt detections marked as to remove (zero marked), and also remove gt detections not in pedestrian
-            # class (not applicable for MOT15)
-            if self.do_preproc and self.benchmark != 'MOT15':
+            if self.do_preproc and self.benchmark == 'HT':
                 gt_to_keep_mask = (np.not_equal(gt_zero_marked, 0)) & \
-                                  (np.equal(gt_classes, cls_id))
+                                  (np.equal(gt_classes, cls_id)) & \
+                                  (gt_visibility > 0.) & \
+                                  (gt_conf > 0.)
+
             else:
                 # There are no classes for MOT15
                 gt_to_keep_mask = np.not_equal(gt_zero_marked, 0)
             data['gt_ids'][t] = gt_ids[gt_to_keep_mask]
             data['gt_dets'][t] = gt_dets[gt_to_keep_mask, :]
             data['similarity_scores'][t] = similarity_scores[gt_to_keep_mask]
+            data['gt_visibility'][t] = gt_visibility # No mask!
+
 
             unique_gt_ids += list(np.unique(data['gt_ids'][t]))
             unique_tracker_ids += list(np.unique(data['tracker_ids'][t]))
             num_tracker_dets += len(data['tracker_ids'][t])
             num_gt_dets += len(data['gt_ids'][t])
+
 
         # Re-label IDs such that there are no empty IDs
         if len(unique_gt_ids) > 0:

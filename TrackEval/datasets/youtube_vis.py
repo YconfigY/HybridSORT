@@ -2,9 +2,9 @@ import os
 import numpy as np
 import json
 from ._base_dataset import _BaseDataset
-from ..utils import TrackEvalException
-from .. import utils
-from .. import _timing
+from TrackEval.utils import TrackEvalException
+from TrackEval import utils
+from TrackEval import _timing
 
 
 class YouTubeVIS(_BaseDataset):

@@ -4,10 +4,10 @@ import json
 import itertools
 from collections import defaultdict
 from scipy.optimize import linear_sum_assignment
-from ..utils import TrackEvalException
+from TrackEval.utils import TrackEvalException
 from ._base_dataset import _BaseDataset
-from .. import utils
-from .. import _timing
+from TrackEval import utils
+from TrackEval import _timing
 
 
 class TAO(_BaseDataset):

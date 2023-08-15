@@ -1,9 +1,9 @@
 
 import numpy as np
 from abc import ABC, abstractmethod
-from .. import _timing
-from ..utils import TrackEvalException
-
+from TrackEval import _timing
+from TrackEval.utils import TrackEvalException
+import os
 
 class _BaseMetric(ABC):
     @abstractmethod
@@ -63,19 +63,26 @@ class _BaseMetric(ABC):
         return sum([all_res[k][field] * all_res[k][weight_field] for k in all_res.keys()]) / np.maximum(1.0, comb_res[
             weight_field])
 
-    def print_table(self, table_res, tracker, cls):
+    def print_table(self, table_res, tracker, cls, output_fol=None):
         """Prints table of results for all sequences"""
+
+        # TODO: [hgx 0403], make file folder for 'val_log.txt'
+        if output_fol is not None:
+            out_file = os.path.join(output_fol, 'val_log.txt')
+            os.makedirs(os.path.dirname(out_file), exist_ok=True)
+        else:
+            out_file = None
+
         print('')
         metric_name = self.get_name()
-        space = "\n                                   " 
-        self._row_print([metric_name + ': ' + tracker + '-' + cls + space] + self.summary_fields)
+        self._row_print(out_file, [metric_name + ': ' + tracker + '-' + cls] + self.summary_fields)       # TODO: [hgx 0403], add 'output_fol'
         for seq, results in sorted(table_res.items()):
             if seq == 'COMBINED_SEQ':
                 continue
             summary_res = self._summary_row(results)
-            self._row_print([seq] + summary_res)
+            self._row_print(out_file, [seq] + summary_res)            # TODO: [hgx 0403], add 'output_fol'
         summary_res = self._summary_row(table_res['COMBINED_SEQ'])
-        self._row_print(['COMBINED'] + summary_res)
+        self._row_print(out_file, ['COMBINED'] + summary_res)         # TODO: [hgx 0403], add 'output_fol'
 
     def _summary_row(self, results_):
         vals = []
@@ -91,7 +98,7 @@ class _BaseMetric(ABC):
         return vals
 
     @staticmethod
-    def _row_print(*argv):
+    def _row_print(out_file, *argv):
         """Prints results in an evenly spaced rows, with more space in first row"""
         if len(argv) == 1:
             argv = argv[0]
@@ -99,6 +106,9 @@ class _BaseMetric(ABC):
         for v in argv[1:]:
             to_print += '%-10s' % str(v)
         print(to_print)
+        if out_file is not None:        # TODO: [hgx 0403], write terminal outputs to txt file
+            with open(out_file, 'a+', newline='') as f:
+                print(to_print, file=f)
 
     def summary_results(self, table_res):
         """Returns a simple summary of final results for a tracker"""

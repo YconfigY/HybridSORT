@@ -4,9 +4,9 @@ import csv
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 from ._base_dataset import _BaseDataset
-from .. import utils
-from ..utils import TrackEvalException
-from .. import _timing
+from TrackEval import utils
+from TrackEval.utils import TrackEvalException
+from TrackEval import _timing
 from ..datasets.rob_mots_classmap import cls_id_to_name
 
 

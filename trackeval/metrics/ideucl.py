@@ -1,9 +1,9 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 from ._base_metric import _BaseMetric
-from .. import _timing
+from TrackEval import _timing
 from collections import defaultdict
-from .. import utils
+from TrackEval import utils
 
 
 class IDEucl(_BaseMetric):
