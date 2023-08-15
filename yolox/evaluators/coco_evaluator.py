@@ -36,7 +36,7 @@ class COCOEvaluator:
         """
         Args:
             dataloader (Dataloader): evaluate dataloader.
-            img_size (int): image size after preprocess. images are resized
+            img_size (int, int): image size after preprocess. images are resized
                 to squares whose shape is (img_size, img_size).
             confthre (float): confidence threshold ranging from 0 to 1, which
                 is defined in the config file.

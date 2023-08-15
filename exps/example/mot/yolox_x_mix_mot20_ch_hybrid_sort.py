@@ -1,12 +1,12 @@
 # encoding: utf-8
 import os
-import random
+
 import torch
-import torch.nn as nn
 import torch.distributed as dist
 
-from yolox.exp import Exp as MyExp
 from yolox.data import get_yolox_datadir
+from yolox.exp import Exp as MyExp
+
 
 class Exp(MyExp):
     def __init__(self):
@@ -16,10 +16,10 @@ class Exp(MyExp):
         self.width = 1.25
         self.exp_name = os.path.split(os.path.realpath(__file__))[1].split(".")[0]
         self.train_ann = "train.json"
-        self.val_ann = "test.json"   # change to train.json when running on training set
+        self.val_ann = "test.json"  # change to train.json when running on training set
         self.input_size = (896, 1600)
         self.test_size = (896, 1600)
-        #self.test_size = (736, 1920)
+        # self.test_size = (736, 1920)
         self.random_size = (20, 36)
         self.max_epoch = 80
         self.print_interval = 20
@@ -106,14 +106,15 @@ class Exp(MyExp):
 
         return train_loader
 
-    def get_eval_loader(self, batch_size, is_distributed, testdev=False, run_tracking=False):   # [hgx0411] dataloader related
+    def get_eval_loader(self, batch_size, is_distributed, testdev=False,
+                        run_tracking=False):  # [hgx0411] dataloader related
         from yolox.data import MOTDataset, ValTransform
 
         valdataset = MOTDataset(
             data_dir=os.path.join(get_yolox_datadir(), "MOT20"),
             json_file=self.val_ann,
             img_size=self.test_size,
-            name='test', # change to train when running on training set
+            name='test',  # change to train when running on training set
             preproc=ValTransform(
                 rgb_means=(0.485, 0.456, 0.406),
                 std=(0.229, 0.224, 0.225),
@@ -142,7 +143,8 @@ class Exp(MyExp):
     def get_evaluator(self, batch_size, is_distributed, testdev=False):
         from yolox.evaluators import COCOEvaluator
 
-        val_loader = self.get_eval_loader(batch_size, is_distributed, testdev=testdev, run_tracking=False)      # [hgx0411] dataloader related
+        val_loader = self.get_eval_loader(batch_size, is_distributed, testdev=testdev,
+                                          run_tracking=False)  # [hgx0411] dataloader related
         evaluator = COCOEvaluator(
             dataloader=val_loader,
             img_size=self.test_size,

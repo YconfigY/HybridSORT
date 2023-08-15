@@ -16,39 +16,42 @@ class Exp(MyExp):
         self.width = 1.25
         self.exp_name = os.path.split(os.path.realpath(__file__))[1].split(".")[0]
         self.train_ann = "train.json"
-        self.val_ann = "test.json"    # change to train.json when running on training set
+        self.val_ann = "val.json"
+        self.test_ann = "val.json"
+        
         self.input_size = (800, 1440)
         self.test_size = (800, 1440)
         self.random_size = (18, 32)
-        self.max_epoch = 80
+        self.max_epoch = 8
         self.print_interval = 20
         self.eval_interval = 5
-        self.test_conf = 0.001
+        self.test_conf = 0.1
         self.nmsthre = 0.7
-        self.no_aug_epochs = 10
+        self.no_aug_epochs = 1
         self.basic_lr_per_img = 0.001 / 64.0
         self.warmup_epochs = 1
 
         # tracking params for Hybird-SORT-ReID
-        self.ckpt = "pretrained/ocsort_x_mot17.pth.tar"
+        self.ckpt = "pretrained/bytetrack_dance_model.pth.tar"
         self.use_byte = True
-        self.dataset = "mot17"
+        self.dataset = "dancetrack"
         self.inertia = 0.05
-        self.iou_thresh = 0.25
+        self.iou_thresh = 0.15
         self.asso = "Height_Modulated_IoU"
         self.TCM_first_step = True
         self.TCM_byte_step = True
         self.TCM_first_step_weight = 1.0
         self.TCM_byte_step_weight = 1.0
-        self.hybird_sort_with_reid = True
+        self.hybrid_sort_with_reid = True
         self.with_fastreid =True
-        self.EG_weight_high_score= 1.3
-        self.EG_weight_low_score= 1.2
-        self.fast_reid_config = "fast_reid/configs/MOT17/sbs_S50.yml"
-        self.fast_reid_weights = "pretrained/mot17_sbs_S50.pth"
-        self.with_longterm_reid_correction = True
-        self.longterm_reid_correction_thresh = 0.4
-        self.longterm_reid_correction_thresh_low = 0.4
+        self.EG_weight_high_score= 4.0
+        self.EG_weight_low_score= 4.4
+        self.fast_reid_config = "fast_reid/configs/CUHKSYSU_DanceTrack/sbs_S50.yml"
+        self.fast_reid_weights = "pretrained/dancetrack_sbs_S50.pth"
+        self.with_longterm_reid_correction = False
+        self.longterm_reid_correction_thresh = 1.0
+        self.longterm_reid_correction_thresh_low = 1.0
+
 
     def get_data_loader(self, batch_size, is_distributed, no_aug=False):
         from yolox.data import (
@@ -61,9 +64,9 @@ class Exp(MyExp):
         )
 
         dataset = MOTDataset(
-            data_dir=os.path.join(get_yolox_datadir(), "mix_det"),
+            data_dir=os.path.join(get_yolox_datadir(), "dancetrack"),
             json_file=self.train_ann,
-            name='',
+            name='train',
             img_size=self.input_size,
             preproc=TrainTransform(
                 rgb_means=(0.485, 0.456, 0.406),
@@ -114,18 +117,31 @@ class Exp(MyExp):
 
     def get_eval_loader(self, batch_size, is_distributed, testdev=False, run_tracking=False):   # [hgx0411] dataloader related
         from yolox.data import MOTDataset, ValTransform
-
-        valdataset = MOTDataset(
-            data_dir=os.path.join(get_yolox_datadir(), "mot"),
-            json_file=self.val_ann,
-            img_size=self.test_size,
-            name='test',   # change to train when running on training set
-            preproc=ValTransform(
-                rgb_means=(0.485, 0.456, 0.406),
-                std=(0.229, 0.224, 0.225),
-            ),
-            run_tracking=run_tracking
-        )
+        
+        if testdev:
+            valdataset = MOTDataset(
+                data_dir=os.path.join(get_yolox_datadir(), "dancetrack"),
+                json_file=self.test_ann,
+                img_size=self.test_size,
+                name='test',
+                preproc=ValTransform(
+                    rgb_means=(0.485, 0.456, 0.406),
+                    std=(0.229, 0.224, 0.225),
+                ),
+                run_tracking=run_tracking
+            )
+        else:
+            valdataset = MOTDataset(
+                data_dir=os.path.join(get_yolox_datadir(), "dancetrack"),
+                json_file=self.val_ann,
+                img_size=self.test_size,
+                name='val',
+                preproc=ValTransform(
+                    rgb_means=(0.485, 0.456, 0.406),
+                    std=(0.229, 0.224, 0.225),
+                ),
+                run_tracking=run_tracking
+            )
 
         if is_distributed:
             batch_size = batch_size // dist.get_world_size()

@@ -1,30 +1,29 @@
-from loguru import logger
-
-import torch
-import torch.backends.cudnn as cudnn
-from torch.nn.parallel import DistributedDataParallel as DDP
-
-from yolox.core import launch
-from yolox.exp import get_exp
-from yolox.utils import configure_nccl, fuse_model, get_local_rank, get_model_info, setup_logger
-from yolox.evaluators import MOTEvaluator, MOTEvaluatorPublic
-from utils.args import make_parser
-
+import glob
 import os
 import random
 import warnings
-import glob
-import motmetrics as mmp
 from collections import OrderedDict
 from pathlib import Path
+
+import torch
+import torch.backends.cudnn as cudnn
+from loguru import logger
+from torch.nn.parallel import DistributedDataParallel as DDP
+
+import motmetrics as mmp
+from utils.args import make_parser
+from yolox.core import launch
+from yolox.evaluators import MOTEvaluator, MOTEvaluatorPublic
+from yolox.exp import get_exp
+from yolox.utils import fuse_model, get_model_info, setup_logger
 
 
 def compare_dataframes(gts, ts):
     accs = []
     names = []
     for k, tsacc in ts.items():
-        if k in gts:       
-            print(k)     
+        if k in gts:
+            print(k)
             logger.info('Comparing {}...'.format(k))
             os.makedirs("results_log", exist_ok=True)
             vflag = open("results_log/eval_{}.txt".format(k), 'w')
@@ -60,7 +59,7 @@ def main(exp, args, num_gpu):
     elif exp.val_ann == "train_half.json":
         gt_type = '_train_half'
         seqs = "MOT17-train_half"
-    elif exp.val_ann == "test.json": 
+    elif exp.val_ann == "test.json":
         gt_type = ''
         seqs = "MOT20-test" if args.mot20 else "MOT17-test"
     else:
@@ -94,7 +93,7 @@ def main(exp, args, num_gpu):
             confthre=exp.test_conf,
             nmsthre=exp.nmsthre,
             num_classes=exp.num_classes,
-            )
+        )
     else:
         evaluator = MOTEvaluatorPublic(
             args=args,
@@ -103,7 +102,7 @@ def main(exp, args, num_gpu):
             confthre=exp.test_conf,
             nmsthre=exp.nmsthre,
             num_classes=exp.num_classes,
-            )
+        )
 
     torch.cuda.set_device(rank)
     model.cuda(rank)
@@ -130,7 +129,7 @@ def main(exp, args, num_gpu):
 
     if args.trt:
         assert (
-            not args.fuse and not is_distributed and args.batch_size == 1
+                not args.fuse and not is_distributed and args.batch_size == 1
         ), "TensorRT model is not support model fusing and distributed inferencing!"
         trt_file = os.path.join(file_name, "model_trt.pth")
         assert os.path.exists(
@@ -146,7 +145,7 @@ def main(exp, args, num_gpu):
     os.makedirs(results_folder, exist_ok=True)
 
     # start evaluate
- 
+
     # *_, summary = evaluator.evaluate_ocsort(
     #     model, is_distributed, args.fp16, trt_file, decoder, exp.test_size, results_folder
     # )
@@ -156,30 +155,32 @@ def main(exp, args, num_gpu):
         )
     else:
         *_, summary = evaluator.evaluate(
-                model, is_distributed, args.fp16, trt_file, decoder, exp.test_size, results_folder
+            model, is_distributed, args.fp16, trt_file, decoder, exp.test_size, results_folder
         )
 
     logger.info("\n" + summary)
- 
+
     # evaluate MOTA
     mmp.lap.default_solver = 'lap'
     print('gt_type', gt_type)
     gtfiles = glob.glob(
-      os.path.join('datasets/mot/train', '*/gt/gt{}.txt'.format(gt_type)))
+        os.path.join('datasets/mot/train', '*/gt/gt{}.txt'.format(gt_type)))
     print('gt_files', gtfiles)
-    tsfiles = [f for f in glob.glob(os.path.join(results_folder, '*.txt')) if not os.path.basename(f).startswith('eval')]
+    tsfiles = [f for f in glob.glob(os.path.join(results_folder, '*.txt'))
+               if not os.path.basename(f).startswith('eval')]
 
     logger.info('Found {} groundtruths and {} test files.'.format(len(gtfiles), len(tsfiles)))
     logger.info('Available LAP solvers {}'.format(mmp.lap.available_solvers))
     logger.info('Default LAP solver \'{}\''.format(mmp.lap.default_solver))
     logger.info('Loading files.')
-    
+
     gt = OrderedDict([(Path(f).parts[-3], mmp.io.loadtxt(f, fmt='mot15-2D', min_confidence=1)) for f in gtfiles])
-    ts = OrderedDict([(os.path.splitext(Path(f).parts[-1])[0], mmp.io.loadtxt(f, fmt='mot15-2D', min_confidence=-1)) for f in tsfiles if "detections" not in f])    
-    
-    mh = mmp.metrics.create()    
+    ts = OrderedDict([(os.path.splitext(Path(f).parts[-1])[0], mmp.io.loadtxt(f, fmt='mot15-2D', min_confidence=-1))
+                      for f in tsfiles if "detections" not in f])
+
+    mh = mmp.metrics.create()
     accs, names = compare_dataframes(gt, ts)
-    
+
     logger.info('Running metrics')
     metrics = ['recall', 'precision', 'num_unique_objects', 'mostly_tracked',
                'partially_tracked', 'mostly_lost', 'num_false_positives', 'num_misses',

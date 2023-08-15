@@ -279,7 +279,7 @@ class ValTransform:
 
     Arguments:
         resize (int): input dimension to SSD
-        rgb_means ((int,int,int)): average RGB of the dataset
+        rgb_means ((float,float,float)): average RGB of the dataset
             (104,117,123)
         swap ((int,int,int)): final order of channels
 

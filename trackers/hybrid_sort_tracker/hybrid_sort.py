@@ -3,7 +3,6 @@
 """
 from __future__ import print_function
 
-import numpy as np
 from .association import *
 
 
@@ -13,7 +12,7 @@ def k_previous_obs(observations, cur_age, k):
     for i in range(k):
         dt = k - i
         if cur_age - dt in observations:
-            return observations[cur_age-dt]
+            return observations[cur_age - dt]
     max_age = max(observations.keys())
     return observations[max_age]
 
@@ -26,10 +25,10 @@ def convert_bbox_to_z(bbox):
     """
     w = bbox[2] - bbox[0]
     h = bbox[3] - bbox[1]
-    x = bbox[0] + w/2.
-    y = bbox[1] + h/2.
+    x = bbox[0] + w / 2.
+    y = bbox[1] + h / 2.
     s = w * h  # scale is just area
-    r = w / float(h+1e-6)
+    r = w / float(h + 1e-6)
     score = bbox[4]
     if score:
         return np.array([x, y, s, score, r]).reshape((5, 1))
@@ -45,46 +44,51 @@ def convert_x_to_bbox(x, score=None):
     w = np.sqrt(x[2] * x[4])
     h = x[2] / w
     score = x[3]
-    if(score == None):
-      return np.array([x[0]-w/2., x[1]-h/2., x[0]+w/2., x[1]+h/2.]).reshape((1, 4))
+    if (score == None):
+        return np.array([x[0] - w / 2., x[1] - h / 2., x[0] + w / 2., x[1] + h / 2.]).reshape((1, 4))
     else:
-      return np.array([x[0]-w/2., x[1]-h/2., x[0]+w/2., x[1]+h/2., score]).reshape((1, 5))
+        return np.array([x[0] - w / 2., x[1] - h / 2., x[0] + w / 2., x[1] + h / 2., score]).reshape((1, 5))
 
 
 def speed_direction(bbox1, bbox2):
-    cx1, cy1 = (bbox1[0]+bbox1[2]) / 2.0, (bbox1[1]+bbox1[3])/2.0
-    cx2, cy2 = (bbox2[0]+bbox2[2]) / 2.0, (bbox2[1]+bbox2[3])/2.0
-    speed = np.array([cy2-cy1, cx2-cx1])
-    norm = np.sqrt((cy2-cy1)**2 + (cx2-cx1)**2) + 1e-6
+    cx1, cy1 = (bbox1[0] + bbox1[2]) / 2.0, (bbox1[1] + bbox1[3]) / 2.0
+    cx2, cy2 = (bbox2[0] + bbox2[2]) / 2.0, (bbox2[1] + bbox2[3]) / 2.0
+    speed = np.array([cy2 - cy1, cx2 - cx1])
+    norm = np.sqrt((cy2 - cy1) ** 2 + (cx2 - cx1) ** 2) + 1e-6
     return speed / norm
+
 
 def speed_direction_lt(bbox1, bbox2):
     cx1, cy1 = bbox1[0], bbox1[1]
     cx2, cy2 = bbox2[0], bbox2[1]
-    speed = np.array([cy2-cy1, cx2-cx1])
-    norm = np.sqrt((cy2-cy1)**2 + (cx2-cx1)**2) + 1e-6
+    speed = np.array([cy2 - cy1, cx2 - cx1])
+    norm = np.sqrt((cy2 - cy1) ** 2 + (cx2 - cx1) ** 2) + 1e-6
     return speed / norm
+
 
 def speed_direction_rt(bbox1, bbox2):
     cx1, cy1 = bbox1[0], bbox1[3]
     cx2, cy2 = bbox2[0], bbox2[3]
-    speed = np.array([cy2-cy1, cx2-cx1])
-    norm = np.sqrt((cy2-cy1)**2 + (cx2-cx1)**2) + 1e-6
+    speed = np.array([cy2 - cy1, cx2 - cx1])
+    norm = np.sqrt((cy2 - cy1) ** 2 + (cx2 - cx1) ** 2) + 1e-6
     return speed / norm
+
 
 def speed_direction_lb(bbox1, bbox2):
     cx1, cy1 = bbox1[2], bbox1[1]
     cx2, cy2 = bbox2[2], bbox2[1]
-    speed = np.array([cy2-cy1, cx2-cx1])
-    norm = np.sqrt((cy2-cy1)**2 + (cx2-cx1)**2) + 1e-6
+    speed = np.array([cy2 - cy1, cx2 - cx1])
+    norm = np.sqrt((cy2 - cy1) ** 2 + (cx2 - cx1) ** 2) + 1e-6
     return speed / norm
+
 
 def speed_direction_rb(bbox1, bbox2):
     cx1, cy1 = bbox1[2], bbox1[3]
     cx2, cy2 = bbox2[2], bbox2[3]
-    speed = np.array([cy2-cy1, cx2-cx1])
-    norm = np.sqrt((cy2-cy1)**2 + (cx2-cx1)**2) + 1e-6
+    speed = np.array([cy2 - cy1, cx2 - cx1])
+    norm = np.sqrt((cy2 - cy1) ** 2 + (cx2 - cx1) ** 2) + 1e-6
     return speed / norm
+
 
 class KalmanBoxTracker(object):
     """
@@ -100,13 +104,13 @@ class KalmanBoxTracker(object):
         # define constant velocity model
         # if not orig and not args.kalman_GPR:
         if not orig:
-          # from .kalmanfilter import KalmanFilterNew as KalmanFilter
-          from .kalmanfilter_score_new import KalmanFilterNew_score_new as KalmanFilter_score_new
-          self.kf = KalmanFilter_score_new(dim_x=9, dim_z=5)
-          # self.kf_score = KalmanFilter_score(dim_x=2, dim_z=1)
+            # from .kalmanfilter import KalmanFilterNew as KalmanFilter
+            from .kalmanfilter_score_new import KalmanFilterNew_score_new as KalmanFilter_score_new
+            self.kf = KalmanFilter_score_new(dim_x=9, dim_z=5)
+            # self.kf_score = KalmanFilter_score(dim_x=2, dim_z=1)
         else:
-          from filterpy.kalman import KalmanFilter
-          self.kf = KalmanFilter(dim_x=7, dim_z=4)
+            from filterpy.kalman import KalmanFilter
+            self.kf = KalmanFilter(dim_x=7, dim_z=4)
         # u, v, s, c, r, ~u, ~v, ~s, ~c
         self.kf.F = np.array([[1, 0, 0, 0, 0, 1, 0, 0, 0],
                               [0, 1, 0, 0, 0, 0, 1, 0, 0],
@@ -135,14 +139,12 @@ class KalmanBoxTracker(object):
 
         self.kf.x[:5] = convert_bbox_to_z(bbox)
 
-
         # self.kf_score.R[0:, 0:] *= 10.
         # self.kf_score.P[1:, 1:] *= 1000.  # give high uncertainty to the unobservable initial velocities
         # self.kf_score.P *= 10.
         # self.kf_score.Q[-1, -1] *= 0.01
         # self.kf_score.Q[1:, 1:] *= 0.01
         # self.kf_score.x[:1] = bbox[-1]
-
 
         self.time_since_update = 0
         self.id = KalmanBoxTracker.count
@@ -244,20 +246,22 @@ class KalmanBoxTracker(object):
         """
         Advances the state vector and returns the predicted bounding box estimate.
         """
-        if((self.kf.x[7]+self.kf.x[2]) <= 0):
+        if ((self.kf.x[7] + self.kf.x[2]) <= 0):
             self.kf.x[7] *= 0.0
 
         self.kf.predict()
         # self.kf_score.predict()
         self.age += 1
-        if(self.time_since_update > 0):
+        if (self.time_since_update > 0):
             self.hit_streak = 0
         self.time_since_update += 1
         self.history.append(convert_x_to_bbox(self.kf.x))
         if not self.confidence_pre:
-            return self.history[-1], np.clip(self.kf.x[3], self.args.track_thresh, 1.0), np.clip(self.confidence, 0.1, self.args.track_thresh)
+            return self.history[-1], np.clip(self.kf.x[3], self.args.track_thresh, 1.0), np.clip(self.confidence, 0.1,
+                                                                                                 self.args.track_thresh)
         else:
-            return self.history[-1], np.clip(self.kf.x[3], self.args.track_thresh, 1.0), np.clip(self.confidence - (self.confidence_pre - self.confidence), 0.1, self.args.track_thresh)
+            return self.history[-1], np.clip(self.kf.x[3], self.args.track_thresh, 1.0), np.clip(
+                self.confidence - (self.confidence_pre - self.confidence), 0.1, self.args.track_thresh)
 
     def get_state(self):
         """
@@ -272,18 +276,18 @@ class KalmanBoxTracker(object):
     that we hardly normalize the cost by all methods to (0,1) which may not be 
     the best practice.
 """
-ASSO_FUNCS = {  "iou": iou_batch,
-                "giou": giou_batch,
-                "ciou": ciou_batch,
-                "diou": diou_batch,
-                "ct_dist": ct_dist,
-                "Height_Modulated_IoU": hmiou
-                }
+ASSO_FUNCS = {"iou": iou_batch,
+              "giou": giou_batch,
+              "ciou": ciou_batch,
+              "diou": diou_batch,
+              "ct_dist": ct_dist,
+              "Height_Modulated_IoU": hmiou
+              }
 
 
 class Hybrid_Sort(object):
     def __init__(self, args, det_thresh, max_age=30, min_hits=3,
-        iou_threshold=0.3, delta_t=3, asso_func="iou", inertia=0.2, use_byte=False):
+                 iou_threshold=0.3, delta_t=3, asso_func="iou", inertia=0.2, use_byte=False):
         """
         Sets key parameters for SORT
         """
@@ -371,7 +375,8 @@ class Hybrid_Sort(object):
                 k_observations, self.inertia, self.asso_func, self.args)
         else:
             matched, unmatched_dets, unmatched_trks = associate_4_points(
-                dets, trks, self.iou_threshold, velocities_lt, velocities_rt, velocities_lb, velocities_rb, k_observations, self.inertia, self.asso_func, self.args)
+                dets, trks, self.iou_threshold, velocities_lt, velocities_rt, velocities_lb, velocities_rb,
+                k_observations, self.inertia, self.asso_func, self.args)
 
         for m in matched:
             self.trackers[m[1]].update(dets[m[0], :])
@@ -391,7 +396,8 @@ class Hybrid_Sort(object):
                     uniform here for simplicity
                 """
                 if self.args.TCM_byte_step:
-                    iou_left -= np.array(cal_score_dif_batch_two_score(dets_second, u_trks) * self.args.TCM_byte_step_weight)
+                    iou_left -= np.array(
+                        cal_score_dif_batch_two_score(dets_second, u_trks) * self.args.TCM_byte_step_weight)
                 matched_indices = linear_assignment(-iou_left)
                 to_remove_trk_indices = []
                 for m in matched_indices:
@@ -446,12 +452,12 @@ class Hybrid_Sort(object):
                 d = trk.last_observation[:4]
             if (trk.time_since_update < 1) and (trk.hit_streak >= self.min_hits or self.frame_count <= self.min_hits):
                 # +1 as MOT benchmark requires positive
-                ret.append(np.concatenate((d, [trk.id+1])).reshape(1, -1))
+                ret.append(np.concatenate((d, [trk.id + 1])).reshape(1, -1))
             i -= 1
             # remove dead tracklet
-            if(trk.time_since_update > self.max_age):
+            if (trk.time_since_update > self.max_age):
                 self.trackers.pop(i)
-        if(len(ret) > 0):
+        if (len(ret) > 0):
             return np.concatenate(ret)
         return np.empty((0, 5))
 
@@ -462,7 +468,7 @@ class Hybrid_Sort(object):
         dets = np.concatenate((dets, det_scores), axis=1)
 
         remain_inds = scores > self.det_thresh
-        
+
         cates = cates[remain_inds]
         dets = dets[remain_inds]
 
@@ -479,16 +485,16 @@ class Hybrid_Sort(object):
         for t in reversed(to_del):
             self.trackers.pop(t)
 
-        velocities = np.array([trk.velocity if trk.velocity is not None else np.array((0,0)) for trk in self.trackers])
+        velocities = np.array([trk.velocity if trk.velocity is not None else np.array((0, 0)) for trk in self.trackers])
         last_boxes = np.array([trk.last_observation for trk in self.trackers])
         k_observations = np.array([k_previous_obs(trk.observations, trk.age, self.delta_t) for trk in self.trackers])
 
-        matched, unmatched_dets, unmatched_trks = associate_kitti\
-              (dets, trks, cates, self.iou_threshold, velocities, k_observations, self.inertia)
-          
+        matched, unmatched_dets, unmatched_trks = associate_kitti \
+            (dets, trks, cates, self.iou_threshold, velocities, k_observations, self.inertia)
+
         for m in matched:
             self.trackers[m[1]].update(dets[m[0], :])
-          
+
         if unmatched_dets.shape[0] > 0 and unmatched_trks.shape[0] > 0:
             """
                 The re-association stage by OCR.
@@ -503,18 +509,18 @@ class Hybrid_Sort(object):
             iou_left = self.asso_func(left_dets_c, left_trks_c)
             iou_left = np.array(iou_left)
             det_cates_left = cates[unmatched_dets]
-            trk_cates_left = trks[unmatched_trks][:,4]
+            trk_cates_left = trks[unmatched_trks][:, 4]
             num_dets = unmatched_dets.shape[0]
             num_trks = unmatched_trks.shape[0]
             cate_matrix = np.zeros((num_dets, num_trks))
             for i in range(num_dets):
                 for j in range(num_trks):
                     if det_cates_left[i] != trk_cates_left[j]:
-                            """
-                                For some datasets, such as KITTI, there are different categories,
-                                we have to avoid associate them together.
-                            """
-                            cate_matrix[i][j] = -1e6
+                        """
+                            For some datasets, such as KITTI, there are different categories,
+                            we have to avoid associate them together.
+                        """
+                        cate_matrix[i][j] = -1e6
             iou_left = iou_left + cate_matrix
             if iou_left.max() > self.iou_threshold - 0.1:
                 rematched_indices = linear_assignment(-iou_left)
@@ -523,15 +529,15 @@ class Hybrid_Sort(object):
                 for m in rematched_indices:
                     det_ind, trk_ind = unmatched_dets[m[0]], unmatched_trks[m[1]]
                     if iou_left[m[0], m[1]] < self.iou_threshold - 0.1:
-                          continue
+                        continue
                     self.trackers[trk_ind].update(dets[det_ind, :])
                     to_remove_det_indices.append(det_ind)
-                    to_remove_trk_indices.append(trk_ind) 
+                    to_remove_trk_indices.append(trk_ind)
                 unmatched_dets = np.setdiff1d(unmatched_dets, np.array(to_remove_det_indices))
                 unmatched_trks = np.setdiff1d(unmatched_trks, np.array(to_remove_trk_indices))
 
         for i in unmatched_dets:
-            trk = KalmanBoxTracker(dets[i,:])
+            trk = KalmanBoxTracker(dets[i, :])
             trk.cate = cates[i]
             self.trackers.append(trk)
         i = len(self.trackers)
@@ -544,19 +550,17 @@ class Hybrid_Sort(object):
             if (trk.time_since_update < 1):
                 if (self.frame_count <= self.min_hits) or (trk.hit_streak >= self.min_hits):
                     # id+1 as MOT benchmark requires positive
-                    ret.append(np.concatenate((d, [trk.id+1], [trk.cate], [0])).reshape(1,-1)) 
+                    ret.append(np.concatenate((d, [trk.id + 1], [trk.cate], [0])).reshape(1, -1))
                 if trk.hit_streak == self.min_hits:
                     # Head Padding (HP): recover the lost steps during initializing the track
                     for prev_i in range(self.min_hits - 1):
-                        prev_observation = trk.history_observations[-(prev_i+2)]
-                        ret.append((np.concatenate((prev_observation[:4], [trk.id+1], [trk.cate], 
-                            [-(prev_i+1)]))).reshape(1,-1))
-            i -= 1 
+                        prev_observation = trk.history_observations[-(prev_i + 2)]
+                        ret.append((np.concatenate((prev_observation[:4], [trk.id + 1], [trk.cate],
+                                                    [-(prev_i + 1)]))).reshape(1, -1))
+            i -= 1
             if (trk.time_since_update > self.max_age):
-                  self.trackers.pop(i)
-        
-        if(len(ret)>0):
+                self.trackers.pop(i)
+
+        if (len(ret) > 0):
             return np.concatenate(ret)
         return np.empty((0, 7))
-
-

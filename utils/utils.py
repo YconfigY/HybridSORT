@@ -1,10 +1,12 @@
-import numpy as np 
+import numpy as np
+
 """
 Utilities for bounding box manipulation and GIoU.
 """
 import torch
 from torchvision.ops.boxes import box_area
 from loguru import logger
+
 
 def write_results(filename, results):
     save_format = '{frame},{id},{x1},{y1},{w},{h},{s},-1,-1,-1\n'
@@ -14,7 +16,8 @@ def write_results(filename, results):
                 if track_id < 0:
                     continue
                 x1, y1, w, h = tlwh
-                line = save_format.format(frame=frame_id, id=track_id, x1=round(x1, 1), y1=round(y1, 1), w=round(w, 1), h=round(h, 1), s=round(score, 2))
+                line = save_format.format(frame=frame_id, id=track_id, x1=round(x1, 1), y1=round(y1, 1), w=round(w, 1),
+                                          h=round(h, 1), s=round(score, 2))
                 f.write(line)
     logger.info('save results to {}'.format(filename))
 
@@ -27,7 +30,8 @@ def write_results_no_score(filename, results):
                 if track_id < 0:
                     continue
                 x1, y1, w, h = tlwh
-                line = save_format.format(frame=frame_id, id=track_id, x1=round(x1, 1), y1=round(y1, 1), w=round(w, 1), h=round(h, 1))
+                line = save_format.format(frame=frame_id, id=track_id, x1=round(x1, 1), y1=round(y1, 1), w=round(w, 1),
+                                          h=round(h, 1))
                 f.write(line)
     logger.info('save results to {}'.format(filename))
 
@@ -95,14 +99,14 @@ def vectorized_iou(boxes1, boxes2):
     xB = np.maximum(x12, np.transpose(x22))
     yB = np.maximum(y12, np.transpose(y22))
 
-    interArea = np.maximum((xB-xA+1), 0) * np.maximum((yB-yA+1), 0)
+    interArea = np.maximum((xB - xA + 1), 0) * np.maximum((yB - yA + 1), 0)
 
-    boxAArea = (x12-x11+1) * (y12-y11+1)
-    boxBArea = (x22-x21+1) * (y22-y21+1)
+    boxAArea = (x12 - x11 + 1) * (y12 - y11 + 1)
+    boxBArea = (x22 - x21 + 1) * (y22 - y21 + 1)
 
     iou = interArea / (boxAArea + np.transpose(boxBArea) - interArea)
     return iou
-    
+
 
 def batch_iou(a, b, epsilon=1e-5):
     """ Given two arrays `a` and `b` where each row contains a bounding
@@ -149,29 +153,31 @@ def batch_iou(a, b, epsilon=1e-5):
     return iou
 
 
-def clip_iou(boxes1,boxes2):
+def clip_iou(boxes1, boxes2):
     area1 = box_area(boxes1)
     area2 = box_area(boxes2)
     lt = torch.max(boxes1[:, :2], boxes2[:, :2])
     rb = torch.min(boxes1[:, 2:], boxes2[:, 2:])
-    wh = (rb-lt).clamp(min=0)
-    inter = wh[:,0]*wh[:,1]
+    wh = (rb - lt).clamp(min=0)
+    inter = wh[:, 0] * wh[:, 1]
     union = area1 + area2 - inter
-    iou = (inter+1e-6) / (union+1e-6)
+    iou = (inter + 1e-6) / (union + 1e-6)
     # generalized version
     # iou=iou-(inter-union)/inter
     return iou
 
+
 def multi_iou(boxes1, boxes2):
-    lt = torch.max(boxes1[...,:2], boxes2[...,:2])
-    rb = torch.min(boxes1[...,2:], boxes2[...,2:])
-    wh = (rb-lt).clamp(min=0)
-    wh_1 = boxes1[...,2:] - boxes1[...,:2]
-    wh_2 = boxes2[...,2:] - boxes2[...,:2]
-    inter = wh[...,0] * wh[...,1]
-    union = wh_1[...,0] * wh_1[...,1] + wh_2[...,0] * wh_2[...,1] - inter
-    iou = (inter+1e-6) / (union+1e-6)
+    lt = torch.max(boxes1[..., :2], boxes2[..., :2])
+    rb = torch.min(boxes1[..., 2:], boxes2[..., 2:])
+    wh = (rb - lt).clamp(min=0)
+    wh_1 = boxes1[..., 2:] - boxes1[..., :2]
+    wh_2 = boxes2[..., 2:] - boxes2[..., :2]
+    inter = wh[..., 0] * wh[..., 1]
+    union = wh_1[..., 0] * wh_1[..., 1] + wh_2[..., 0] * wh_2[..., 1] - inter
+    iou = (inter + 1e-6) / (union + 1e-6)
     return iou
+
 
 def box_cxcywh_to_xyxy(x):
     x_c, y_c, w, h = x.unbind(-1)
@@ -200,7 +206,7 @@ def box_iou(boxes1, boxes2):
 
     union = area1[:, None] + area2 - inter
 
-    iou = (inter+1e-6) / (union+1e-6)
+    iou = (inter + 1e-6) / (union + 1e-6)
     return iou, union
 
 
@@ -223,7 +229,7 @@ def generalized_box_iou(boxes1, boxes2):
     wh = (rb - lt).clamp(min=0)  # [N,M,2]
     area = wh[:, :, 0] * wh[:, :, 1]
 
-    return iou - ((area - union)+1e-6) / (area+1e-6)
+    return iou - ((area - union) + 1e-6) / (area + 1e-6)
 
 
 def masks_to_boxes(masks):

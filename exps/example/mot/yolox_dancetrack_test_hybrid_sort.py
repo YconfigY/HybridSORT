@@ -1,12 +1,12 @@
 # encoding: utf-8
 import os
-import random
+
 import torch
-import torch.nn as nn
 import torch.distributed as dist
 
-from yolox.exp import Exp as MyExp
 from yolox.data import get_yolox_datadir
+from yolox.exp import Exp as MyExp
+
 
 class Exp(MyExp):
     def __init__(self):
@@ -18,7 +18,7 @@ class Exp(MyExp):
         self.train_ann = "train.json"
         self.val_ann = "val.json"
         self.test_ann = "test.json"
-        
+
         self.input_size = (800, 1440)
         self.test_size = (800, 1440)
         self.random_size = (18, 32)
@@ -88,9 +88,7 @@ class Exp(MyExp):
         if is_distributed:
             batch_size = batch_size // dist.get_world_size()
 
-        sampler = InfiniteSampler(
-            len(self.dataset), seed=self.seed if self.seed else 0
-        )
+        sampler = InfiniteSampler(len(self.dataset), seed=self.seed if self.seed else 0)
 
         batch_sampler = YoloBatchSampler(
             sampler=sampler,
@@ -106,9 +104,10 @@ class Exp(MyExp):
 
         return train_loader
 
-    def get_eval_loader(self, batch_size, is_distributed, testdev=False, run_tracking=False):   # [hgx0411] dataloader related
+    def get_eval_loader(self, batch_size, is_distributed, testdev=False,
+                        run_tracking=False):  # [hgx0411] dataloader related
         from yolox.data import MOTDataset, ValTransform
-        
+
         if testdev:
             valdataset = MOTDataset(
                 data_dir=os.path.join(get_yolox_datadir(), "dancetrack"),
@@ -136,9 +135,7 @@ class Exp(MyExp):
 
         if is_distributed:
             batch_size = batch_size // dist.get_world_size()
-            sampler = torch.utils.data.distributed.DistributedSampler(
-                valdataset, shuffle=False
-            )
+            sampler = torch.utils.data.distributed.DistributedSampler(valdataset, shuffle=False)
         else:
             sampler = torch.utils.data.SequentialSampler(valdataset)
 
@@ -155,7 +152,8 @@ class Exp(MyExp):
     def get_evaluator(self, batch_size, is_distributed, testdev=False):
         from yolox.evaluators import COCOEvaluator
 
-        val_loader = self.get_eval_loader(batch_size, is_distributed, testdev=testdev, run_tracking=False)      # [hgx0411] dataloader related
+        val_loader = self.get_eval_loader(batch_size, is_distributed, testdev=testdev,
+                                          run_tracking=False)  # [hgx0411] dataloader related
         evaluator = COCOEvaluator(
             dataloader=val_loader,
             img_size=self.test_size,

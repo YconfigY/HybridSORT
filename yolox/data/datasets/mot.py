@@ -28,7 +28,7 @@ class MOTDataset(Dataset):
             data_dir (str): dataset root directory
             json_file (str): COCO json file name
             name (str): COCO data name (e.g. 'train2017' or 'val2017')
-            img_size (int): target image size after pre-processing
+            img_size (int, int): target image size after pre-processing
             preproc: data augmentation strategy
         """
         super().__init__(img_size)

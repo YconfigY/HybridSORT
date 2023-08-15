@@ -35,8 +35,8 @@ class MotChallenge2DBox(_BaseDataset):
             'SEQ_INFO': None,  # If not None, directly specify sequences to eval and their number of timesteps
             'GT_LOC_FORMAT': '{gt_folder}/{seq}/gt/gt.txt',  # '{gt_folder}/{seq}/gt/gt.txt'
             'SKIP_SPLIT_FOL': False,  # If False, data is in GT_FOLDER/BENCHMARK-SPLIT_TO_EVAL/ and in
-                                      # TRACKERS_FOLDER/BENCHMARK-SPLIT_TO_EVAL/tracker/
-                                      # If True, then the middle 'benchmark-split' folder is skipped for both.
+            # TRACKERS_FOLDER/BENCHMARK-SPLIT_TO_EVAL/tracker/
+            # If True, then the middle 'benchmark-split' folder is skipped for both.
         }
         return default_config
 
@@ -47,14 +47,14 @@ class MotChallenge2DBox(_BaseDataset):
         self.config = utils.init_config(config, self.get_default_dataset_config(), self.get_name())
 
         self.benchmark = self.config['BENCHMARK']
-        gt_set = self.config['SPLIT_TO_EVAL']       # TODO: [hgx 0401]: delete "self.config['BENCHMARK'] + '-' +"
+        gt_set = self.config['SPLIT_TO_EVAL']  # TODO: [hgx 0401]: delete "self.config['BENCHMARK'] + '-' +"
         self.gt_set = gt_set
         if not self.config['SKIP_SPLIT_FOL']:
             split_fol = gt_set
         else:
             split_fol = ''
         self.gt_fol = os.path.join(self.config['GT_FOLDER'], split_fol)
-        self.tracker_fol = os.path.join(self.config['TRACKERS_FOLDER'])         # TODO: [hgx 0401]: delete "split_fol"
+        self.tracker_fol = os.path.join(self.config['TRACKERS_FOLDER'])  # TODO: [hgx 0401]: delete "split_fol"
         self.should_classes_combine = False
         self.use_super_categories = False
         self.data_is_zipped = self.config['INPUT_AS_ZIP']
@@ -118,7 +118,8 @@ class MotChallenge2DBox(_BaseDataset):
                     raise TrackEvalException('Tracker file not found: ' + tracker + '/' + os.path.basename(curr_file))
             else:
                 for seq in self.seq_list:
-                    curr_file = os.path.join(self.tracker_fol, seq + '.txt')        # TODO: [hgx 0401], delete "tracker, self.tracker_sub_fol"
+                    # TODO: [hgx 0401], delete "tracker, self.tracker_sub_fol"
+                    curr_file = os.path.join(self.tracker_fol, seq + '.txt')
                     if not os.path.isfile(curr_file):
                         print('Tracker file not found: ' + curr_file)
                         raise TrackEvalException(
@@ -195,7 +196,8 @@ class MotChallenge2DBox(_BaseDataset):
             if is_gt:
                 file = self.config["GT_LOC_FORMAT"].format(gt_folder=self.gt_fol, seq=seq)
             else:
-                file = os.path.join(self.tracker_fol, seq + '.txt')         # TODO: [hgx 0401], delete "tracker, self.tracker_sub_fol"
+                file = os.path.join(self.tracker_fol,
+                                    seq + '.txt')  # TODO: [hgx 0401], delete "tracker, self.tracker_sub_fol"
 
         # Load raw data from text file
         read_data, ignore_data = self._load_simple_text_file(file, is_zipped=self.data_is_zipped, zip_file=zip_file)
@@ -210,7 +212,7 @@ class MotChallenge2DBox(_BaseDataset):
         raw_data = {key: [None] * num_timesteps for key in data_keys}
 
         # Check for any extra time keys
-        current_time_keys = [str( t+ 1) for t in range(num_timesteps)]
+        current_time_keys = [str(t + 1) for t in range(num_timesteps)]
         extra_time_keys = [x for x in read_data.keys() if x not in current_time_keys]
         if len(extra_time_keys) > 0:
             if is_gt:
@@ -222,7 +224,7 @@ class MotChallenge2DBox(_BaseDataset):
                     [str(x) + ', ' for x in extra_time_keys]))
 
         for t in range(num_timesteps):
-            time_key = str(t+1)
+            time_key = str(t + 1)
             if time_key in read_data.keys():
                 try:
                     time_data = np.asarray(read_data[time_key], dtype=np.float)
@@ -363,12 +365,12 @@ class MotChallenge2DBox(_BaseDataset):
                 invalid_classes = np.setdiff1d(np.unique(gt_classes), self.valid_class_numbers)
                 if len(invalid_classes) > 0:
                     print(' '.join([str(x) for x in invalid_classes]))
-                    raise(TrackEvalException('Attempting to evaluate using invalid gt classes. '
-                                             'This warning only triggers if preprocessing is performed, '
-                                             'e.g. not for MOT15 or where prepropressing is explicitly disabled. '
-                                             'Please either check your gt data, or disable preprocessing. '
-                                             'The following invalid classes were found in timestep ' + str(t) + ': ' +
-                                             ' '.join([str(x) for x in invalid_classes])))
+                    raise (TrackEvalException('Attempting to evaluate using invalid gt classes. '
+                                              'This warning only triggers if preprocessing is performed, '
+                                              'e.g. not for MOT15 or where prepropressing is explicitly disabled. '
+                                              'Please either check your gt data, or disable preprocessing. '
+                                              'The following invalid classes were found in timestep ' + str(t) + ': ' +
+                                              ' '.join([str(x) for x in invalid_classes])))
 
                 matching_scores = similarity_scores.copy()
                 matching_scores[matching_scores < 0.5 - np.finfo('float').eps] = 0

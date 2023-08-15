@@ -1,29 +1,25 @@
-from loguru import logger
-
-import torch
-import torch.backends.cudnn as cudnn
-from torch.nn.parallel import DistributedDataParallel as DDP
-
-from yolox.core import launch
-from yolox.exp import get_exp
-from yolox.utils import configure_nccl, fuse_model, get_local_rank, get_model_info, setup_logger
-from yolox.evaluators import MOTEvaluatorDance as MOTEvaluator
-
-from utils.args import make_parser, args_merge_params_form_exp
 import os
 import random
 import warnings
-import glob
+
+import torch
+import torch.backends.cudnn as cudnn
+from loguru import logger
+from torch.nn.parallel import DistributedDataParallel as DDP
+
 import motmetrics as mm
-from collections import OrderedDict
-from pathlib import Path
+from utils.args import make_parser, args_merge_params_form_exp
+from yolox.core import launch
+from yolox.evaluators import MOTEvaluatorDance as MOTEvaluator
+from yolox.exp import get_exp
+from yolox.utils import fuse_model, get_model_info, setup_logger
 
 
 def compare_dataframes(gts, ts):
     accs = []
     names = []
     for k, tsacc in ts.items():
-        if k in gts:            
+        if k in gts:
             logger.info('Comparing {}...'.format(k))
             accs.append(mm.utils.compare_to_groundtruth(gts[k], tsacc, 'iou', distth=0.5))
             names.append(k)
@@ -35,7 +31,6 @@ def compare_dataframes(gts, ts):
 
 @logger.catch
 def main(exp, args, num_gpu):
-    
     if args.seed is not None:
         random.seed(args.seed)
         torch.manual_seed(args.seed)
@@ -44,7 +39,7 @@ def main(exp, args, num_gpu):
             "You have chosen to seed testing. This will turn on the CUDNN deterministic setting, "
         )
 
-    is_distributed = num_gpu > 1
+    is_distributed = num_gpu > 1  # 布尔型变量，若num_gpu大于1则为True
 
     # set environment variables for distributed training
     cudnn.benchmark = True
@@ -53,6 +48,7 @@ def main(exp, args, num_gpu):
     if rank == 0:
         os.makedirs(file_name, exist_ok=True)
 
+    # 结果存储路径
     result_dir = "{}_test".format(args.expn) + \
                  "_EGWeightHigh" + str(args.EG_weight_high_score) + \
                  "_EGWeightLow" + str(args.EG_weight_low_score) + \
@@ -61,17 +57,16 @@ def main(exp, args, num_gpu):
                  "_LongTermReIDCorrectionThreshLow" + str(args.longterm_reid_correction_thresh_low) + \
                  "_IoUThresh" + str(args.iou_thresh) + \
                  "_ScoreDifInterval" + str(args.TCM_first_step_weight) + \
-                 "_SecScoreDifInterval" + str(args.TCM_byte_step_weight) \
-        if args.test else \
-        "{}_val".format(args.expn) + \
-        "_EGWeightHigh" + str(args.EG_weight_high_score) + \
-        "_EGWeightLow" + str(args.EG_weight_low_score) + \
-        "_WithLongTermReIDCorrection" + str(args.with_longterm_reid_correction) + \
-        "_LongTermReIDCorrectionThresh" + str(args.longterm_reid_correction_thresh) + \
-        "_LongTermReIDCorrectionThreshLow" + str(args.longterm_reid_correction_thresh_low) + \
-        "_IoUThresh" + str(args.iou_thresh) + \
-        "_ScoreDifInterval" + str(args.TCM_first_step_weight) + \
-        "_SecScoreDifInterval" + str(args.TCM_byte_step_weight)
+                 "_SecScoreDifInterval" + str(args.TCM_byte_step_weight) if args.test \
+        else "{}_val".format(args.expn) + \
+             "_EGWeightHigh" + str(args.EG_weight_high_score) + \
+             "_EGWeightLow" + str(args.EG_weight_low_score) + \
+             "_WithLongTermReIDCorrection" + str(args.with_longterm_reid_correction) + \
+             "_LongTermReIDCorrectionThresh" + str(args.longterm_reid_correction_thresh) + \
+             "_LongTermReIDCorrectionThreshLow" + str(args.longterm_reid_correction_thresh_low) + \
+             "_IoUThresh" + str(args.iou_thresh) + \
+             "_ScoreDifInterval" + str(args.TCM_first_step_weight) + \
+             "_SecScoreDifInterval" + str(args.TCM_byte_step_weight)
     results_folder = os.path.join(file_name, result_dir)
     os.makedirs(results_folder, exist_ok=True)
     setup_logger(file_name, distributed_rank=rank, filename="val_log.txt", mode="a")
@@ -95,7 +90,7 @@ def main(exp, args, num_gpu):
         confthre=exp.test_conf,
         nmsthre=exp.nmsthre,
         num_classes=exp.num_classes,
-        )
+    )
 
     torch.cuda.set_device(rank)
     model.cuda(rank)
@@ -122,7 +117,7 @@ def main(exp, args, num_gpu):
 
     if args.trt:
         assert (
-            not args.fuse and not is_distributed and args.batch_size == 1
+                not args.fuse and not is_distributed and args.batch_size == 1
         ), "TensorRT model is not support model fusing and distributed inferencing!"
         trt_file = os.path.join(file_name, "model_trt.pth")
         assert os.path.exists(
@@ -141,13 +136,12 @@ def main(exp, args, num_gpu):
         )
     else:
         *_, summary = evaluator.evaluate_hybrid_sort_reid(
-                args, model, is_distributed, args.fp16, trt_file, decoder, exp.test_size, results_folder
+            args, model, is_distributed, args.fp16, trt_file, decoder, exp.test_size, results_folder
         )
 
-    
     if args.test:
         # we skip evaluation for inference on test set
-        return 
+        return
 
     logger.info("\n" + summary)
 
@@ -174,8 +168,7 @@ def main(exp, args, num_gpu):
                        "--USE_PARALLEL False " \
                        "--NUM_PARALLEL_CORES 1  " \
                        "--GT_FOLDER datasets/mot/ " \
-                       "--TRACKERS_FOLDER " + results_folder + " " \
-                       "--GT_LOC_FORMAT {gt_folder}/{seq}/gt/gt_val_half.txt"
+                       "--TRACKERS_FOLDER " + results_folder + "--GT_LOC_FORMAT {gt_folder}/{seq}/gt/gt_val_half.txt"
     elif args.dataset == "mot20":
         hota_command = "python TrackEval/scripts/run_mot_challenge.py " \
                        "--BENCHMARK MOT20 " \
@@ -186,8 +179,7 @@ def main(exp, args, num_gpu):
                        "--USE_PARALLEL False " \
                        "--NUM_PARALLEL_CORES 1  " \
                        "--GT_FOLDER datasets/MOT20/ " \
-                       "--TRACKERS_FOLDER " + results_folder + " " \
-                       "--GT_LOC_FORMAT {gt_folder}/{seq}/gt/gt_val_half.txt"
+                       "--TRACKERS_FOLDER " + results_folder + "--GT_LOC_FORMAT {gt_folder}/{seq}/gt/gt_val_half.txt"
     else:
         assert args.dataset in ["dancetrack", "mot17"]
     os.system(hota_command)

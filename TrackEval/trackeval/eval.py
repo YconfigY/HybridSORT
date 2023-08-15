@@ -1,12 +1,13 @@
+import os
 import time
 import traceback
-from multiprocessing.pool import Pool
 from functools import partial
-import os
-from . import utils
-from .utils import TrackEvalException
-from . import _timing
-from .metrics import Count
+from multiprocessing.pool import Pool
+
+from TrackEval.trackeval import _timing, utils
+
+from TrackEval.trackeval.metrics import Count
+from TrackEval.trackeval.utils import TrackEvalException
 
 
 class Evaluator:
@@ -18,7 +19,7 @@ class Evaluator:
         code_path = utils.get_code_path()
         default_config = {
             'USE_PARALLEL': False,
-            'NUM_PARALLEL_CORES': 8,
+            'NUM_PARALLEL_CORES': 8,  # num_workers for processing origin data
             'BREAK_ON_ERROR': True,  # Raises exception and exits with error
             'RETURN_ON_ERROR': False,  # if not BREAK_ON_ERROR, then returns from function on error
             'LOG_ON_ERROR': os.path.join(code_path, 'error_log.txt'),  # if not None, save any errors into a log file.
@@ -95,8 +96,9 @@ class Evaluator:
                     for c_cls in class_list:
                         res['COMBINED_SEQ'][c_cls] = {}
                         for metric, metric_name in zip(metrics_list, metric_names):
-                            curr_res = {seq_key: seq_value[c_cls][metric_name] for seq_key, seq_value in res.items() if
-                                        seq_key != 'COMBINED_SEQ'}
+                            curr_res = {seq_key: seq_value[c_cls][metric_name]
+                                        for seq_key, seq_value in res.items()
+                                        if seq_key != 'COMBINED_SEQ'}
                             res['COMBINED_SEQ'][c_cls][metric_name] = metric.combine_sequences(curr_res)
                     # combine classes
                     if dataset.should_classes_combine:
@@ -104,8 +106,9 @@ class Evaluator:
                         res['COMBINED_SEQ']['cls_comb_cls_av'] = {}
                         res['COMBINED_SEQ']['cls_comb_det_av'] = {}
                         for metric, metric_name in zip(metrics_list, metric_names):
-                            cls_res = {cls_key: cls_value[metric_name] for cls_key, cls_value in
-                                       res['COMBINED_SEQ'].items() if cls_key not in combined_cls_keys}
+                            cls_res = {cls_key: cls_value[metric_name]
+                                       for cls_key, cls_value in res['COMBINED_SEQ'].items()
+                                       if cls_key not in  combined_cls_keys}
                             res['COMBINED_SEQ']['cls_comb_cls_av'][metric_name] = \
                                 metric.combine_classes_class_averaged(cls_res)
                             res['COMBINED_SEQ']['cls_comb_det_av'][metric_name] = \
@@ -116,8 +119,9 @@ class Evaluator:
                             combined_cls_keys.append(cat)
                             res['COMBINED_SEQ'][cat] = {}
                             for metric, metric_name in zip(metrics_list, metric_names):
-                                cat_res = {cls_key: cls_value[metric_name] for cls_key, cls_value in
-                                           res['COMBINED_SEQ'].items() if cls_key in sub_cats}
+                                cat_res = {cls_key: cls_value[metric_name]
+                                           for cls_key, cls_value in res['COMBINED_SEQ'].items()
+                                           if cls_key in sub_cats}
                                 res['COMBINED_SEQ'][cat][metric_name] = metric.combine_classes_det_averaged(cat_res)
 
                     # Print and output results in various formats
@@ -135,23 +139,24 @@ class Evaluator:
                                 if c_cls in combined_cls_keys:
                                     table_res = {'COMBINED_SEQ': res['COMBINED_SEQ'][c_cls][metric_name]}
                                 else:
-                                    table_res = {seq_key: seq_value[c_cls][metric_name] for seq_key, seq_value
-                                                 in res.items()}
+                                    table_res = {seq_key: seq_value[c_cls][metric_name]
+                                                 for seq_key, seq_value in res.items()}
 
                                 if config['PRINT_RESULTS'] and config['PRINT_ONLY_COMBINED']:
                                     dont_print = dataset.should_classes_combine and c_cls not in combined_cls_keys
                                     if not dont_print:
+                                        # TODO: [hgx 0403], add 'output_fol'
                                         metric.print_table({'COMBINED_SEQ': table_res['COMBINED_SEQ']},
-                                                           tracker_display_name, c_cls, output_fol)     # TODO: [hgx 0403], add 'output_fol'
+                                                           tracker_display_name, c_cls, output_fol)
                                 elif config['PRINT_RESULTS']:
-                                    metric.print_table(table_res, tracker_display_name, c_cls, output_fol)      # TODO: [hgx 0403], add 'output_fol'
+                                    # TODO: [hgx 0403], add 'output_fol'
+                                    metric.print_table(table_res, tracker_display_name, c_cls, output_fol)
                                 if config['OUTPUT_SUMMARY']:
                                     summaries.append(metric.summary_results(table_res))
                                 if config['OUTPUT_DETAILED']:
                                     details.append(metric.detailed_results(table_res))
                                 if config['PLOT_CURVES']:
-                                    metric.plot_single_tracker_results(table_res, tracker_display_name, c_cls,
-                                                                       output_fol)
+                                    metric.plot_single_tracker_results(table_res, tracker_display_name, c_cls, output_fol)
                             if config['OUTPUT_SUMMARY']:
                                 utils.write_summary_results(summaries, c_cls, output_fol)
                             if config['OUTPUT_DETAILED']:

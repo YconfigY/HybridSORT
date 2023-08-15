@@ -1,29 +1,28 @@
-from loguru import logger
-
-import torch
-import torch.backends.cudnn as cudnn
-from torch.nn.parallel import DistributedDataParallel as DDP
-
-from yolox.core import launch
-from yolox.exp import get_exp
-from yolox.utils import configure_nccl, fuse_model, get_local_rank, get_model_info, setup_logger
-from yolox.evaluators import MOTEvaluatorDance as MOTEvaluator
-
-from utils.args import make_parser
+import glob
 import os
 import random
 import warnings
-import glob
-import motmetrics as mm
 from collections import OrderedDict
 from pathlib import Path
+
+import torch
+import torch.backends.cudnn as cudnn
+from loguru import logger
+from torch.nn.parallel import DistributedDataParallel as DDP
+
+import motmetrics as mm
+from utils.args import make_parser
+from yolox.core import launch
+from yolox.evaluators import MOTEvaluatorDance as MOTEvaluator
+from yolox.exp import get_exp
+from yolox.utils import fuse_model, get_model_info, setup_logger
 
 
 def compare_dataframes(gts, ts):
     accs = []
     names = []
     for k, tsacc in ts.items():
-        if k in gts:            
+        if k in gts:
             logger.info('Comparing {}...'.format(k))
             accs.append(mm.utils.compare_to_groundtruth(gts[k], tsacc, 'iou', distth=0.5))
             names.append(k)
@@ -35,7 +34,6 @@ def compare_dataframes(gts, ts):
 
 @logger.catch
 def main(exp, args, num_gpu):
-    
     if args.seed is not None:
         random.seed(args.seed)
         torch.manual_seed(args.seed)
@@ -77,7 +75,7 @@ def main(exp, args, num_gpu):
         confthre=exp.test_conf,
         nmsthre=exp.nmsthre,
         num_classes=exp.num_classes,
-        )
+    )
 
     torch.cuda.set_device(rank)
     model.cuda(rank)
@@ -104,7 +102,7 @@ def main(exp, args, num_gpu):
 
     if args.trt:
         assert (
-            not args.fuse and not is_distributed and args.batch_size == 1
+                not args.fuse and not is_distributed and args.batch_size == 1
         ), "TensorRT model is not support model fusing and distributed inferencing!"
         trt_file = os.path.join(file_name, "model_trt.pth")
         assert os.path.exists(
@@ -118,33 +116,35 @@ def main(exp, args, num_gpu):
 
     # start tracking
     *_, summary = evaluator.evaluate_ocsort(
-            model, is_distributed, args.fp16, trt_file, decoder, exp.test_size, results_folder
+        model, is_distributed, args.fp16, trt_file, decoder, exp.test_size, results_folder
     )
-    
+
     if args.test:
         # we skip evaluation for inference on test set
-        return 
+        return
 
-    # if we evaluate on validation set, 
+        # if we evaluate on validation set,
     logger.info("\n" + summary)
 
     # evaluate on the validation set
     mm.lap.default_solver = 'lap'
     gtfiles = glob.glob(os.path.join('datasets/dancetrack/val', '*/gt/gt.txt'))
     print('gt_files', gtfiles)
-    tsfiles = [f for f in glob.glob(os.path.join(results_folder, '*.txt')) if not os.path.basename(f).startswith('eval')]
+    tsfiles = [f for f in glob.glob(os.path.join(results_folder, '*.txt'))
+               if not os.path.basename(f).startswith('eval')]
 
     logger.info('Found {} groundtruths and {} test files.'.format(len(gtfiles), len(tsfiles)))
     logger.info('Available LAP solvers {}'.format(mm.lap.available_solvers))
     logger.info('Default LAP solver \'{}\''.format(mm.lap.default_solver))
     logger.info('Loading files.')
-    
+
     gt = OrderedDict([(Path(f).parts[-3], mm.io.loadtxt(f, fmt='mot15-2D', min_confidence=1)) for f in gtfiles])
-    ts = OrderedDict([(os.path.splitext(Path(f).parts[-1])[0], mm.io.loadtxt(f, fmt='mot15-2D', min_confidence=-1)) for f in tsfiles])    
-    
-    mh = mm.metrics.create()    
+    ts = OrderedDict([(os.path.splitext(Path(f).parts[-1])[0], mm.io.loadtxt(f, fmt='mot15-2D', min_confidence=-1))
+         for f in tsfiles])
+
+    mh = mm.metrics.create()
     accs, names = compare_dataframes(gt, ts)
-    
+
     logger.info('Running metrics')
     metrics = ['recall', 'precision', 'num_unique_objects', 'mostly_tracked',
                'partially_tracked', 'mostly_lost', 'num_false_positives', 'num_misses',

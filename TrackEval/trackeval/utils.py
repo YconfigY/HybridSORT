@@ -1,4 +1,3 @@
-
 import os
 import csv
 import argparse
@@ -13,6 +12,8 @@ def init_config(config, default_config, name=None):
         for k in default_config.keys():
             if k not in config.keys():
                 config[k] = default_config[k]
+
+    # Print config
     if name and config['PRINT_CONFIG']:
         print('\n%s Config:' % name)
         for c in config.keys():
